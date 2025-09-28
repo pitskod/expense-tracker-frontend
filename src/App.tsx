@@ -1,13 +1,12 @@
-import { useState } from 'react'
 import { Logo } from './components/Logo';
 import { Loader } from './components/Loader';
 import { Button } from './components/Button';
 import { Input } from './components/Input';
 import { InputLabel } from './components/InputLabel';
+import { Icon } from './components/Icon';
+
 
 function App() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
   let loading = false;
 
   function handleClick() {
@@ -33,6 +32,20 @@ function App() {
           onChange={handleClick} />
 
         <Button onClick={handleClick}>Submit</Button>
+
+        <Icon icon="credit" />
+        <Icon icon="debt" />
+        <Icon icon="hobby" />
+        <Icon icon="mobile" />
+        <Icon icon="restaurant" />
+        <Icon icon="shopping" />
+        <Icon icon="subscription" />
+        <Icon icon="transport" />
+        <Icon icon="utility" />
+        <Icon icon="other_payment" />
+
+
+
       </div>
     </div>
   )
