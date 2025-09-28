@@ -1,4 +1,0 @@
-// Components directory
-// Add your React components here
-
-export {};
