@@ -34,9 +34,9 @@ function App() {
         <Button onClick={handleClick}>Submit</Button>
 
         <Icon icon="credit" />
-        <Icon icon="debt" />
-        <Icon icon="hobby" />
-        <Icon icon="mobile" />
+        <Icon icon="debt" color="white"/>
+        <Icon icon="hobby" color="grey" size={50} />
+        <Icon icon="mobile" color="grey"/>
         <Icon icon="restaurant" />
         <Icon icon="shopping" />
         <Icon icon="subscription" />
