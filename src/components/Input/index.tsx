@@ -1,39 +1,54 @@
 import styles from './index.module.css';
+import { InputLabel } from '../InputLabel';
 
 interface InputProps {
   label: string;
-  value?: string;
+  defaultValue?: string;
   placeholder?: string;
   type?: 'text' | 'email' | 'password' | 'number';
+  error?: boolean;
+  helperText?: string;
   onChange?: (value: string) => void;
   disabled?: boolean;
+  id?: string;
 }
 
 export const Input = ({ 
   label, 
-  value, 
+  defaultValue, 
   placeholder, 
   type = 'text', 
+  error,
+  helperText,
   onChange, 
-  disabled 
+  disabled,
+  id 
 }: InputProps) => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange?.(e.target.value);
   };
 
+  const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
+
   return (
     <div className={styles.inputGroup}>
-      <label className={styles.label}>
+      <InputLabel htmlFor={inputId}>
         {label}
-      </label>
+      </InputLabel>
       <input
+        id={inputId}
         type={type}
-        value={value}
+        defaultValue={defaultValue}
         placeholder={placeholder}
         onChange={handleChange}
         disabled={disabled}
         className={styles.input}
       />
+      {helperText && (
+        <div className={error ? styles.error : styles.helperText}>
+          {helperText}
+        </div>
+      )}
     </div>
   );
 };
