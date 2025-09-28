@@ -1,9 +1,9 @@
 import styles from './index.module.css';
 
-interface InputProps {
+export interface InputProps {
   defaultValue?: string;
   placeholder?: string;
-  type?: 'text' | 'email' | 'password' | 'number';
+  type?: 'text' | 'email' | 'password' | 'number' | 'date';
   error?: boolean;
   helperText?: string;
   onChange?: (value: string) => void;

@@ -1,16 +1,25 @@
+import { useState } from 'react';
 import { Logo } from './components/Logo';
 import { Loader } from './components/Loader';
 import { Button } from './components/Button';
 import { Input } from './components/Input';
 import { InputLabel } from './components/InputLabel';
 import { Icon } from './components/Icon';
+import { DatePicker } from './components/DatePicker';
 
 
 function App() {
   let loading = false;
+  const name = "John Doe";
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date()); // Today's date
 
   function handleClick() {
     console.log('Button clicked');
+  }
+
+  function handleDateChange(date: Date) {
+    console.log('Selected date:', date);
+    setSelectedDate(date);
   }
 
   return (
@@ -32,6 +41,15 @@ function App() {
           onChange={handleClick} />
 
         <Button onClick={handleClick}>Submit</Button>
+
+        <div style={{ marginTop: '20px' }}>
+          <InputLabel>Select Date</InputLabel>
+          <DatePicker 
+            placeholder="Choose a date"
+            value={new Date()}
+            onChange={handleDateChange}
+          />
+        </div>
 
         <Icon icon="credit" />
         <Icon icon="debt" color="white"/>
