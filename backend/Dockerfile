@@ -12,7 +12,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN pip install --no-cache-dir uv
 
 # Copy dependency files
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml uv.lock alembic.ini entrypoint.sh ./
+
+COPY migrations ./migrations
 
 # Install uv and project dependencies including uvicorn
 RUN uv sync --frozen --no-dev
@@ -21,9 +23,11 @@ RUN uv sync --frozen --no-dev
 # Copy the rest of the application
 COPY ./app ./app
 
+# Make entrypoint.sh executable
+RUN chmod +x ./entrypoint.sh
+
 # Expose the port the app runs on
 EXPOSE 8000
 
-# Command to run the application
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
-
+# Command to run the entrypoint script
+CMD ["bash", "./entrypoint.sh"]

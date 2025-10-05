@@ -1,18 +1,25 @@
-from fastapi import APIRouter
+from typing import Annotated
 
-router = APIRouter()
+from fastapi import APIRouter, Depends
+from sqlmodel import Session, select
 
+from app.models.users import User, UserCreateRequest, UserResponse
+from app.utils.db import get_session
 
-@router.get("/users/", tags=["users"])
-async def read_users():
-    return [{"username": "Rick"}, {"username": "Morty"}]
+router = APIRouter(tags=["users"])
 
-
-@router.get("/users/me", tags=["users"])
-async def read_user_me():
-    return {"username": "fakecurrentuser"}
+sessionDep = Annotated[Session, Depends(get_session)]
 
 
-@router.get("/users/{username}", tags=["users"])
-async def read_user(username: str):
-    return {"username": username}
+@router.post("/", response_model=UserResponse)
+async def create_user(user: UserCreateRequest, session: sessionDep):
+    user = User(**user.model_dump())
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return UserResponse(**user.model_dump())
+
+
+@router.get("/")
+async def list_users(session: sessionDep):
+    return session.exec(select(User)).all()

@@ -8,7 +8,7 @@ class DatabaseConfig:
     def __init__(self):
         self.host: str = os.getenv("DB_HOST", "localhost")
         self.port: int = int(os.getenv("DB_PORT", "5432"))
-        self.name: str = os.getenv("DB_NAME", "expense_tracker")
+        self.name: str = os.getenv("DB_NAME", "postgres")  # Default matches docker-compose
         self.user: str = os.getenv("DB_USER", "postgres")
         self.password: str = os.getenv("DB_PASSWORD", "passw0rd")
 

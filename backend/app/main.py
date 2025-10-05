@@ -10,7 +10,7 @@ from app.routers.users import router as users_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Creating database tables...")
-    create_db_and_tables()
+    # create_db_and_tables()
     print("Database tables created!")
     yield
     print("Shutting down...")

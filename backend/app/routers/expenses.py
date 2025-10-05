@@ -6,12 +6,12 @@ from sqlmodel import Session, select
 from app.models.expense import Expense, ExpenseCreateRequest, ExpenseResponse, ExpenseUpdateRequest
 from app.utils.db import get_session
 
-router = APIRouter()
+router = APIRouter(tags=["expenses"])
 
 SessionDep = Annotated[Session, Depends(get_session)]
 
 
-@router.post("/", response_model=ExpenseResponse, tags=["expenses"])
+@router.post("/", response_model=ExpenseResponse)
 async def create_expense(expense: ExpenseCreateRequest, session: SessionDep):
     db_expense = Expense(**expense.model_dump())
     session.add(db_expense)
@@ -20,7 +20,7 @@ async def create_expense(expense: ExpenseCreateRequest, session: SessionDep):
     return db_expense
 
 
-@router.patch("/{expense_id}", response_model=ExpenseResponse, tags=["expenses"])
+@router.patch("/{expense_id}", response_model=ExpenseResponse)
 async def update_expense(expense_id: int, expense: ExpenseUpdateRequest, session: SessionDep):
     db_expense = session.get(Expense, expense_id)
 
@@ -36,7 +36,7 @@ async def update_expense(expense_id: int, expense: ExpenseUpdateRequest, session
     return db_expense
 
 
-@router.get("/{id}", response_model=ExpenseResponse, tags=["expenses"])
+@router.get("/{id}", response_model=ExpenseResponse)
 def get_expense(id: int, session: SessionDep):
     db_expense = session.get(Expense, id)
 
@@ -46,7 +46,7 @@ def get_expense(id: int, session: SessionDep):
     return db_expense
 
 
-@router.delete("/{id}", tags=["expenses"])
+@router.delete("/{id}")
 def delete_expense(id: int, session: SessionDep):
     db_expense = session.get(Expense, id)
 
@@ -59,7 +59,7 @@ def delete_expense(id: int, session: SessionDep):
     raise HTTPException(status_code=404, detail="Expense not found")
 
 
-@router.get("/", response_model=list[ExpenseResponse], tags=["expenses"])
+@router.get("/", response_model=list[ExpenseResponse])
 def list_expenses(session: SessionDep):
     expenses = session.exec(select(Expense)).all()
     return expenses

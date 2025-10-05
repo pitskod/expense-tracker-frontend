@@ -10,7 +10,8 @@ services:
     environment:
       - VITE_API_URL=http://host.docker.internal:8000
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     volumes:
       - ./src:/app/src
       - ./public:/app/public
@@ -24,22 +25,28 @@ services:
     environment:
       - DB_HOST=db
       - DB_PORT=5432
-      - DB_NAME=postgres
+      - DB_NAME=expense_tracker
       - DB_USER=postgres
       - DB_PASSWORD=postgres
     depends_on:
       - db
     volumes:
       - ./backend/app:/app/app
+      - ./backend/migrations:/app/migrations
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   db:
     image: postgres:15-alpine
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=postgres
+      - POSTGRES_DB=expense_tracker
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
