@@ -1,0 +1,13 @@
+Metadata-Version: 2.4
+Name: backend
+Version: 0.1.0
+Summary: Add your description here
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: asyncpg>=0.30.0
+Requires-Dist: fastapi>=0.117.1
+Requires-Dist: fastapi-cli>=0.0.13
+Requires-Dist: psycopg2-binary>=2.9.10
+Requires-Dist: psycopg[binary]>=3.2.10
+Requires-Dist: sqlmodel[asyncio]>=0.0.25
+Requires-Dist: uvicorn[standard]>=0.37.0

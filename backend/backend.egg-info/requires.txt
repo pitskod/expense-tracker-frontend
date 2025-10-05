@@ -1,0 +1,7 @@
+asyncpg>=0.30.0
+fastapi>=0.117.1
+fastapi-cli>=0.0.13
+psycopg2-binary>=2.9.10
+psycopg[binary]>=3.2.10
+sqlmodel[asyncio]>=0.0.25
+uvicorn[standard]>=0.37.0

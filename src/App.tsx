@@ -11,13 +11,14 @@ import { DatePicker } from './components/DatePicker';
 function App() {
   let loading = false;
   const name = "John Doe";
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date()); // Today's date
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   function handleClick() {
     console.log('Button clicked');
   }
 
-  function handleDateChange(date: Date) {
+  function handleDateChange(value: string) {
+    const date = new Date(value);
     console.log('Selected date:', date);
     setSelectedDate(date);
   }
@@ -44,9 +45,9 @@ function App() {
 
         <div style={{ marginTop: '20px' }}>
           <InputLabel>Select Date</InputLabel>
-          <DatePicker 
+          <DatePicker
             placeholder="Choose a date"
-            value={new Date()}
+            value={selectedDate.toISOString().split('T')[0]}
             onChange={handleDateChange}
           />
         </div>

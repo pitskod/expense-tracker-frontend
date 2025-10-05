@@ -1,0 +1,8 @@
+# Find process using port 5432
+netstat -ano | findstr :5432
+
+# After you get the PID (Process ID) from the above command, use this to see what program it is
+tasklist | findstr <PID>
+
+# Kill the process using its PID
+taskkill /PID <PID> /F
