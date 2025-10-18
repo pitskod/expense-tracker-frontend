@@ -15,4 +15,7 @@ dependencies = [
     "uvicorn[standard]>=0.37.0",
     "pydantic[email]>=2.11.10",
     "alembic>=1.16.5",
+    "python-jose[cryptography]>=3.3.0",
+    "passlib[bcrypt]>=1.7.4",
+    "python-multipart>=0.0.16",
 ]

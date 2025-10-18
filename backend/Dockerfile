@@ -21,7 +21,7 @@ RUN uv sync --frozen --no-dev
 
 
 # Copy the rest of the application
-COPY ./app ./app
+COPY ./app .
 
 # Make entrypoint.sh executable
 RUN chmod +x ./entrypoint.sh

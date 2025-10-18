@@ -13,6 +13,30 @@ dist-ssr
 build
 *.local
 
+# Python
+__pycache__/
+*.py[cod]
+*.cpython-*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
 # Environment variables
 .env
 .env.local

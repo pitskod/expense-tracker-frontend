@@ -6,7 +6,7 @@ from sqlmodel import Session, select
 from app.models.expense import Expense, ExpenseCreateRequest, ExpenseResponse, ExpenseUpdateRequest
 from app.utils.db import get_session
 
-router = APIRouter(tags=["expenses"])
+router = APIRouter()
 
 SessionDep = Annotated[Session, Depends(get_session)]
 
