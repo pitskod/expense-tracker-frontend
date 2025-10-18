@@ -42,7 +42,9 @@ async def sign_up(user_data: UserCreateRequest, session: SessionDep):
         logger.info(f"Successful sign-up for user: {user.email}")
         
         return UserTokenResponse(**tokens)
-        
+    
+    except HTTPException:
+        raise
     except ValueError as e:
         logger.warning(f"Invalid sign-up data for {user_data.email}: {str(e)}")
         raise HTTPException(

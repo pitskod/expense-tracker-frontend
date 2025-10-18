@@ -5,16 +5,25 @@ from passlib.context import CryptContext
 from sqlmodel import Session, select
 from app.models.users import User
 from app.models.refresh_tokens import RefreshToken, RefreshTokenCreate
+from app.config.config import app_config
 import secrets
+import logging
 
 # Configure password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# bcrypt has a 72-byte input limit; bcrypt_sha256 pre-hashes the password to avoid this issue.
+# Keep both to verify existing bcrypt hashes while generating new bcrypt_sha256 hashes.
+pwd_context = CryptContext(
+    schemes=["bcrypt_sha256"],
+    deprecated="auto",
+)
 
-# JWT Configuration
-SECRET_KEY = "your-secret-key-here"  # In production, use environment variable
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+# JWT Configuration (from app config)
+SECRET_KEY = app_config.jwt_secret_key
+ALGORITHM = app_config.jwt_algorithm
+ACCESS_TOKEN_EXPIRE_MINUTES = app_config.jwt_expire_minutes
 REFRESH_TOKEN_EXPIRE_DAYS = 30
+
+logger = logging.getLogger(__name__)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -88,6 +97,8 @@ def create_user_tokens(session: Session, user: User) -> dict:
     session.add(db_refresh_token)
     session.commit()
     
+    logger.info(f"Tokens created for user {user.email}")
+    
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
@@ -107,5 +118,7 @@ def create_user(session: Session, email: str, name: str, password: str) -> User:
     session.add(user)
     session.commit()
     session.refresh(user)
+    
+    logger.info(f"New user created: {email}")
     
     return user
