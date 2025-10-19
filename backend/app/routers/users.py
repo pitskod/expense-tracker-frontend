@@ -13,20 +13,6 @@ sessionDep = Annotated[Session, Depends(get_session)]
 logger = logging.getLogger(__name__)
 
 
-@router.post("/", response_model=UserResponse)
-async def create_user(user: UserCreateRequest, session: sessionDep):
-    user = User(**user.model_dump())
-    session.add(user)
-    session.commit()
-    session.refresh(user)
-    return UserResponse(**user.model_dump())
-
-
-@router.get("/")
-async def list_users(session: sessionDep):
-    return session.exec(select(User)).all()
-
-
 @router.get("/me", response_model=UserResponse)
 async def get_me(request: Request, session: sessionDep):
     """Return the currently authenticated user's public details.

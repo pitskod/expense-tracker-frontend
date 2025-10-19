@@ -1,7 +1,7 @@
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session
-from app.models.users import UserCreateRequest, UserLoginRequest, UserTokenResponse, UserResponse
+from app.models.users import UserCreateRequest, UserLoginRequest, UserTokenResponse, UserResponse, User
 from app.utils.db import get_session
 from app.utils.auth import (
     authenticate_user, 
@@ -9,6 +9,8 @@ from app.utils.auth import (
     get_user_by_email, 
     create_user
 )
+from app.models.refresh_tokens import TokenRefreshRequest, RefreshToken
+from datetime import datetime, timezone
 import logging
 
 logger = logging.getLogger(__name__)
@@ -85,3 +87,50 @@ async def sign_in(user_data: UserLoginRequest, session: SessionDep):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error during authentication"
         )
+
+@router.post("/token", response_model=UserTokenResponse)
+async def refresh_access_token(payload: TokenRefreshRequest, session: SessionDep):
+    """Validate refresh token and issue a new access and refresh token pair."""
+    token_value = payload.refresh_token
+
+    try:
+        # Look up token (ideally hashed)
+        db_token: RefreshToken | None = (
+            session.query(RefreshToken)
+            .filter(RefreshToken.token == token_value)
+            .first()
+        )
+        if not db_token:
+            logger.warning("Invalid refresh token used")
+            raise HTTPException(status_code=401, detail="Invalid refresh token")
+
+        # Expiry check
+        expires_at = db_token.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if expires_at <= datetime.now(timezone.utc):
+            logger.info("Expired refresh token for user_id=%s", db_token.user_id)
+            # Clean up expired token
+            session.delete(db_token)
+            session.commit()
+            raise HTTPException(status_code=401, detail="Expired refresh token")
+
+        # Validate user
+        user = session.get(User, db_token.user_id)
+        if not user:
+            logger.warning("Refresh token for unknown user_id=%s", db_token.user_id)
+            raise HTTPException(status_code=401, detail="Invalid refresh token")
+
+        # Rotate token - delete old and create new
+        session.delete(db_token)
+        tokens = create_user_tokens(session, user)
+        session.commit()
+
+        logger.info("Refreshed tokens for user_id=%s", user.id)
+        return UserTokenResponse(**tokens)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Unexpected error during token refresh")
+        raise HTTPException(status_code=500, detail="Internal server error during token refresh")

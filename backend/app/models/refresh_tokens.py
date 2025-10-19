@@ -26,3 +26,7 @@ class RefreshTokenCreate(SQLModel):
 
 class RefreshTokenResponse(RefreshTokenBase):
     id: int
+
+
+class TokenRefreshRequest(SQLModel):
+    refresh_token: str
