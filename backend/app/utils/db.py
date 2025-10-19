@@ -5,6 +5,7 @@ from app.config.config import app_config
 from app.models.users import User
 from app.models.expense import Expense
 from app.models.refresh_tokens import RefreshToken
+from app.models.reset_codes import ResetCode
 
 engine = create_engine(app_config.database.database_url, echo=True)  # echo=True для отладки SQL запросов
 

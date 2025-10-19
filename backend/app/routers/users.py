@@ -22,13 +22,13 @@ async def get_me(request: Request, session: sessionDep):
     user_email = getattr(request.state, "user_email", None)
     if not user_email:
         # Should be prevented by middleware, but keep a safe guard
-        logger.warning("Unauthorized access attempt to /users/me without user_email in state")
+        logger.warning("Unauthorized access attempt to /api/users/me without user_email in state")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
 
     user: User | None = session.query(User).filter(User.email == user_email).first()
     if not user:
-        logger.warning("Authenticated email not found in DB while accessing /users/me: %s", user_email)
+        logger.warning("Authenticated email not found in DB while accessing /api/users/me: %s", user_email)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    logger.info("/users/me accessed by %s", user_email)
+    logger.info("/api/users/me accessed by %s", user_email)
     return UserResponse(id=user.id, email=user.email, name=user.name)

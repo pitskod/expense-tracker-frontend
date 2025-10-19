@@ -15,7 +15,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
     """
     Middleware that validates Bearer access tokens for protected routes.
 
-    - Skips protection for explicitly excluded path prefixes (e.g., /auth).
+    - Skips protection for explicitly excluded path prefixes (e.g., /api/auth).
     - Returns 401 Unauthorized when token is missing, invalid, or expired.
     - Logs unauthorized access attempts with remote address and path.
     """
@@ -23,8 +23,8 @@ class AuthMiddleware(BaseHTTPMiddleware):
     def __init__(self, app, protected_prefixes: Iterable[str] | None = None, exclude_prefixes: Iterable[str] | None = None):
         super().__init__(app)
         # Consider everything protected under provided prefixes, except excluded ones
-        self.protected_prefixes = tuple(protected_prefixes or ("/users", "/expenses"))
-        self.exclude_prefixes = tuple(exclude_prefixes or ("/auth", "/docs", "/openapi.json", "/redoc"))
+        self.protected_prefixes = tuple(protected_prefixes or ("/api/users", "/api/expenses"))
+        self.exclude_prefixes = tuple(exclude_prefixes or ("/api/auth", "/docs", "/openapi.json", "/redoc"))
 
     async def dispatch(self, request: Request, call_next: Callable[[Request], Response]) -> Response:
         path = request.url.path

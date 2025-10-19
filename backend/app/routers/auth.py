@@ -2,6 +2,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session
 from app.models.users import UserCreateRequest, UserLoginRequest, UserTokenResponse, UserResponse, User
+from app.models.refresh_tokens import TokenRefreshRequest, RefreshToken
+from app.models.reset_codes import ForgotPasswordRequest, ResetCodeResponse
 from app.utils.db import get_session
 from app.utils.auth import (
     authenticate_user, 
@@ -9,7 +11,13 @@ from app.utils.auth import (
     get_user_by_email, 
     create_user
 )
-from app.models.refresh_tokens import TokenRefreshRequest, RefreshToken
+from app.utils.reset_codes import (
+    create_reset_code,
+    get_user_by_email as get_user_by_email_reset,
+    generate_reset_link
+)
+from app.utils.email import email_service
+from app.config.config import app_config
 from datetime import datetime, timezone
 import logging
 
@@ -134,3 +142,78 @@ async def refresh_access_token(payload: TokenRefreshRequest, session: SessionDep
     except Exception as e:
         logger.exception("Unexpected error during token refresh")
         raise HTTPException(status_code=500, detail="Internal server error during token refresh")
+
+
+@router.post("/forgot-password", response_model=ResetCodeResponse)
+async def forgot_password(request: ForgotPasswordRequest, session: SessionDep):
+    """Send a password reset code via email."""
+    try:
+        # Find user by email
+        user = get_user_by_email_reset(session, request.email)
+        response = ResetCodeResponse(message="If your email is registered, you will receive a reset code.")
+        if not user:
+            # For security, don't reveal if email exists or not
+            logger.warning(f"Password reset requested for non-existent email: {request.email}")
+            return response
+
+        # Generate reset code
+        reset_code = create_reset_code(session, user.id)
+        
+        # Generate reset link for frontend
+        reset_link = generate_reset_link(reset_code)
+        
+        # Send email
+        email_sent = await email_service.send_password_reset_email(
+            to_email=user.email,
+            reset_code=reset_code,
+            reset_link=reset_link,
+            user_name=user.name
+        )
+        
+        if not email_sent:
+            logger.error(f"Email service failed, but reset code created for {user.email}")
+            # In development, we'll still return success even if email fails
+            # In production, you might want to handle this differently
+        else:
+            logger.info(f"Password reset email sent to {user.email}")
+        
+        return response
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Forgot password error for {request.email}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error during password reset request"
+        )
+
+
+@router.get("/dev/reset-codes/{email}")
+async def get_reset_codes_dev(email: str, session: SessionDep):
+    """Development endpoint to get reset codes for an email (remove in production)."""
+    if not app_config.is_development:
+        raise HTTPException(status_code=404, detail="Not found")
+    
+    from app.utils.reset_codes import get_user_by_email
+    from sqlmodel import select
+    from app.models.reset_codes import ResetCode
+    
+    user = get_user_by_email(session, email)
+    if not user:
+        return {"codes": []}
+    
+    statement = select(ResetCode).where(ResetCode.user_id == user.id)
+    codes = session.exec(statement).all()
+    
+    return {
+        "codes": [
+            {
+                "code": code.code,
+                "expires_at": code.expires_at,
+                "used": code.used,
+                "created_at": code.created_at
+            }
+            for code in codes
+        ]
+    }

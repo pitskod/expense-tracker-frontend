@@ -9,6 +9,7 @@ from sqlmodel import SQLModel
 from app.models.expense import Expense
 from app.models.users import User
 from app.models.refresh_tokens import RefreshToken
+from app.models.reset_codes import ResetCode
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

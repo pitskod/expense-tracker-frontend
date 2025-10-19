@@ -7,24 +7,20 @@ from routers.auth import router as auth_router
 from utils.db import create_db_and_tables
 from utils.middleware import AuthMiddleware
 
-def lifespan(app: FastAPI):
-    create_db_and_tables()
-    yield
-
     
-app = FastAPI(lifespan=lifespan)
+app = FastAPI()
 
 # Register authentication middleware to protect specific routes
 # Note: tuples with a single item require a trailing comma.
 app.add_middleware(
     AuthMiddleware,
-    protected_prefixes=("/users", "/expenses"),
-    exclude_prefixes=("/auth", "/docs", "/openapi.json", "/redoc"),
+    protected_prefixes=("/api/users", "/api/expenses"),
+    exclude_prefixes=("/api/auth", "/docs", "/openapi.json", "/redoc"),
 )
 
-app.include_router(expenses_router, prefix="/expenses", tags=["expenses"])
-app.include_router(users_router, prefix="/users", tags=["users"])
-app.include_router(auth_router, prefix="/auth", tags=["auth"])
+app.include_router(expenses_router, prefix="/api/expenses", tags=["expenses"])
+app.include_router(users_router, prefix="/api/users", tags=["users"])
+app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
 
 
 # Customize OpenAPI to include Bearer auth so Swagger UI shows the Authorize button
@@ -48,7 +44,7 @@ def custom_openapi():
 
     # Mark protected paths to require Bearer auth in docs (so Swagger sends the header)
     for path, methods in openapi_schema.get("paths", {}).items():
-        if path.startswith("/users") or path.startswith("/expenses"):
+        if path.startswith("/api/users") or path.startswith("/api/expenses"):
             for method_obj in methods.values():
                 method_obj.setdefault("security", []).append({"BearerAuth": []})
 

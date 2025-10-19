@@ -1,5 +1,11 @@
 import os
 from functools import lru_cache
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+env_path = Path(__file__).parent.parent.parent / ".env"
+load_dotenv(dotenv_path=env_path)
 
 
 class DatabaseConfig:
@@ -23,6 +29,18 @@ class DatabaseConfig:
         return f"postgresql+asyncpg://{self.user}:{self.password}@{self.host}:{self.port}/{self.name}"
 
 
+class EmailConfig:
+    """Email configuration from environment variables"""
+
+    def __init__(self):
+        self.smtp_server: str = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+        self.smtp_port: int = int(os.getenv("SMTP_PORT", "587"))
+        self.sender_email: str = os.getenv("SENDER_EMAIL", "")
+        self.sender_password: str = os.getenv("SENDER_PASSWORD", "")
+        self.sender_name: str = os.getenv("SENDER_NAME", "Expense Tracker")
+        self.frontend_url: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    
+
 class AppConfig:
     """Application configuration from environment variables"""
 
@@ -37,6 +55,7 @@ class AppConfig:
         self.jwt_expire_minutes: int = int(os.getenv("JWT_EXPIRE_MINUTES", "60"))
 
         self.database: DatabaseConfig = DatabaseConfig()
+        self.email: EmailConfig = EmailConfig()
 
     @property
     def is_development(self) -> bool:
