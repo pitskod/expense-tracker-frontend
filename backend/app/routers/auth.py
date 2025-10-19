@@ -1,8 +1,8 @@
 from typing import Annotated
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from sqlmodel import Session
 from app.models.users import UserCreateRequest, UserLoginRequest, UserTokenResponse, UserResponse, User
-from app.models.refresh_tokens import TokenRefreshRequest, RefreshToken
+from app.models.refresh_tokens import RefreshToken, LogoutResponse
 from app.models.reset_codes import ForgotPasswordRequest, ResetCodeResponse, RestorePasswordRequest, RestorePasswordResponse
 from app.utils.db import get_session
 from app.utils.auth import (
@@ -10,7 +10,11 @@ from app.utils.auth import (
     create_user_tokens, 
     get_user_by_email, 
     create_user,
-    update_user_password
+    update_user_password,
+    logout_user,
+    logout_user_all_devices,
+    set_refresh_token_cookie,
+    clear_refresh_token_cookie
 )
 from app.utils.reset_codes import (
     create_reset_code,
@@ -31,8 +35,8 @@ SessionDep = Annotated[Session, Depends(get_session)]
 
 
 @router.post("/sign-up", response_model=UserTokenResponse, status_code=status.HTTP_201_CREATED)
-async def sign_up(user_data: UserCreateRequest, session: SessionDep):
-    """Register a new user and return access and refresh tokens."""
+async def sign_up(user_data: UserCreateRequest, session: SessionDep, response: Response):
+    """Register a new user and return access token with refresh token in HTTP-only cookie."""
     try:
         existing_user = get_user_by_email(session, user_data.email)
         if existing_user:
@@ -51,9 +55,15 @@ async def sign_up(user_data: UserCreateRequest, session: SessionDep):
         
         tokens = create_user_tokens(session, user)
         
+        # Set refresh token as HTTP-only cookie
+        set_refresh_token_cookie(response, tokens["refresh_token"])
+        
         logger.info(f"Successful sign-up for user: {user.email}")
         
-        return UserTokenResponse(**tokens)
+        return UserTokenResponse(
+            access_token=tokens["access_token"],
+            token_type=tokens["token_type"]
+        )
     
     except HTTPException:
         raise
@@ -72,8 +82,8 @@ async def sign_up(user_data: UserCreateRequest, session: SessionDep):
 
 
 @router.post("/sign-in", response_model=UserTokenResponse)
-async def sign_in(user_data: UserLoginRequest, session: SessionDep):
-    """Authenticate user and return access and refresh tokens."""
+async def sign_in(user_data: UserLoginRequest, session: SessionDep, response: Response):
+    """Authenticate user and return access token with refresh token in HTTP-only cookie."""
     try:
         user = authenticate_user(session, user_data.email, user_data.password)
         if not user:
@@ -85,9 +95,15 @@ async def sign_in(user_data: UserLoginRequest, session: SessionDep):
         
         tokens = create_user_tokens(session, user)
         
+        # Set refresh token as HTTP-only cookie
+        set_refresh_token_cookie(response, tokens["refresh_token"])
+        
         logger.info(f"Successful sign-in for user: {user.email}")
         
-        return UserTokenResponse(**tokens)
+        return UserTokenResponse(
+            access_token=tokens["access_token"],
+            token_type=tokens["token_type"]
+        )
         
     except HTTPException:
         raise
@@ -99,15 +115,22 @@ async def sign_in(user_data: UserLoginRequest, session: SessionDep):
         )
 
 @router.post("/token", response_model=UserTokenResponse)
-async def refresh_access_token(payload: TokenRefreshRequest, session: SessionDep):
-    """Validate refresh token and issue a new access and refresh token pair."""
-    token_value = payload.refresh_token
+async def refresh_access_token(request: Request, session: SessionDep, response: Response):
+    """Validate refresh token from cookie and issue new access and refresh token pair."""
+    refresh_token = request.cookies.get("refresh_token")
+    
+    if not refresh_token:
+        logger.warning("Token refresh attempt without refresh token cookie")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token not found"
+        )
 
     try:
         # Look up token (ideally hashed)
         db_token: RefreshToken | None = (
             session.query(RefreshToken)
-            .filter(RefreshToken.token == token_value)
+            .filter(RefreshToken.token == refresh_token)
             .first()
         )
         if not db_token:
@@ -123,6 +146,8 @@ async def refresh_access_token(payload: TokenRefreshRequest, session: SessionDep
             # Clean up expired token
             session.delete(db_token)
             session.commit()
+            # Clear the expired cookie
+            clear_refresh_token_cookie(response)
             raise HTTPException(status_code=401, detail="Expired refresh token")
 
         # Validate user
@@ -136,8 +161,14 @@ async def refresh_access_token(payload: TokenRefreshRequest, session: SessionDep
         tokens = create_user_tokens(session, user)
         session.commit()
 
+        # Set new refresh token as HTTP-only cookie
+        set_refresh_token_cookie(response, tokens["refresh_token"])
+
         logger.info("Refreshed tokens for user_id=%s", user.id)
-        return UserTokenResponse(**tokens)
+        return UserTokenResponse(
+            access_token=tokens["access_token"],
+            token_type=tokens["token_type"]
+        )
 
     except HTTPException:
         raise
@@ -241,4 +272,96 @@ async def restore_password(request: RestorePasswordRequest, session: SessionDep)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error during password reset"
+        )
+
+
+@router.get("/logout", response_model=LogoutResponse)
+async def logout(request: Request, session: SessionDep, response: Response):
+    """Logout user from current device by invalidating the refresh token from cookie."""
+    refresh_token = request.cookies.get("refresh_token")
+    
+    if not refresh_token:
+        logger.warning("Logout attempt without refresh token cookie")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No refresh token found"
+        )
+        
+    try:
+        logger.info("Logout attempt for current device")
+        
+        # Invalidate the specific refresh token
+        success = logout_user(session, refresh_token)
+        
+        # Clear the refresh token cookie regardless of success
+        clear_refresh_token_cookie(response)
+        
+        if not success:
+            logger.warning("Logout failed: Invalid refresh token")
+            # Still return success to prevent token enumeration
+        
+        return LogoutResponse(message="Successfully logged out from current device")
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Logout error: {str(e)}")
+        # Clear cookie even on error
+        clear_refresh_token_cookie(response)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error during logout"
+        )
+
+
+@router.get("/logoutAll", response_model=LogoutResponse)
+async def logout_all(request: Request, session: SessionDep, response: Response):
+    """Logout user from all devices by invalidating all refresh tokens."""
+    refresh_token = request.cookies.get("refresh_token")
+    
+    if not refresh_token:
+        logger.warning("Logout all attempt without refresh token cookie")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No refresh token found"
+        )
+        
+    try:
+        logger.info("Logout all devices attempt")
+        
+        # First, verify the refresh token to get the user
+        db_token = session.query(RefreshToken).filter(RefreshToken.token == refresh_token).first()
+        
+        # Clear the refresh token cookie regardless of what happens next
+        clear_refresh_token_cookie(response)
+        
+        if not db_token:
+            logger.warning("Logout all failed: Invalid refresh token")
+            # Still return success to prevent token enumeration
+            return LogoutResponse(message="Successfully logged out from all devices")
+        
+        # Get user associated with the token
+        user = session.get(User, db_token.user_id)
+        if not user:
+            logger.warning("Logout all failed: User not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        # Logout from all devices
+        tokens_invalidated = logout_user_all_devices(session, user.email)
+        
+        if tokens_invalidated == 0:
+            logger.warning(f"No tokens found to invalidate for user: {user.email}")
+        
+        return LogoutResponse(message=f"Successfully logged out from all devices ({tokens_invalidated} sessions ended)")
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Logout all error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error during logout from all devices"
         )

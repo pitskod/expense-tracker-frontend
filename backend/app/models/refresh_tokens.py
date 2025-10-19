@@ -28,5 +28,8 @@ class RefreshTokenResponse(RefreshTokenBase):
     id: int
 
 
-class TokenRefreshRequest(SQLModel):
-    refresh_token: str
+# Note: TokenRefreshRequest and LogoutRequest removed - refresh token is now read from HTTP-only cookie
+
+
+class LogoutResponse(SQLModel):
+    message: str

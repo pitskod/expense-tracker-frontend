@@ -9,6 +9,9 @@ from app.config.config import app_config
 import secrets
 import logging
 
+# FastAPI Response import for type hints
+from fastapi import Response
+
 # Configure password hashing
 # bcrypt has a 72-byte input limit; bcrypt_sha256 pre-hashes the password to avoid this issue.
 # Keep both to verify existing bcrypt hashes while generating new bcrypt_sha256 hashes.
@@ -77,7 +80,7 @@ def authenticate_user(session: Session, email: str, password: str) -> Optional[U
 
 
 def create_user_tokens(session: Session, user: User) -> dict:
-    """Create both access and refresh tokens for a user."""
+    """Create both access and refresh tokens for a user. Returns access token and refresh token separately."""
     # Create access token
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
@@ -101,8 +104,9 @@ def create_user_tokens(session: Session, user: User) -> dict:
     
     return {
         "access_token": access_token,
-        "refresh_token": refresh_token,
-        "token_type": "bearer"
+        "refresh_token": refresh_token,  # Will be used to set cookie
+        "token_type": "bearer",
+        "refresh_token_expires": refresh_token_expires
     }
 
 
@@ -139,3 +143,88 @@ def update_user_password(session: Session, user: User, new_password: str) -> boo
         logger.error(f"Failed to update password for user {user.email}: {str(e)}")
         session.rollback()
         return False
+
+
+def logout_user(session: Session, refresh_token: str) -> bool:
+    """
+    Logout user from current device by invalidating specific refresh token.
+    Returns True if successful, False if token not found.
+    """
+    try:
+        db_token = session.query(RefreshToken).filter(RefreshToken.token == refresh_token).first()
+        if not db_token:
+            logger.warning(f"Logout attempt with invalid refresh token")
+            return False
+        
+        # Get user info for logging before deletion
+        user = session.get(User, db_token.user_id)
+        user_email = user.email if user else "unknown"
+        
+        session.delete(db_token)
+        session.commit()
+        
+        logger.info(f"User logged out successfully: {user_email}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error during logout: {str(e)}")
+        session.rollback()
+        return False
+
+
+def logout_user_all_devices(session: Session, user_email: str) -> int:
+    """
+    Logout user from all devices by invalidating all refresh tokens.
+    Returns number of tokens invalidated.
+    """
+    try:
+        user = get_user_by_email(session, user_email)
+        if not user:
+            logger.warning(f"Logout all devices attempt for non-existent user: {user_email}")
+            return 0
+        
+        # Get all refresh tokens for this user
+        user_tokens = session.query(RefreshToken).filter(RefreshToken.user_id == user.id).all()
+        token_count = len(user_tokens)
+        
+        # Delete all tokens
+        for token in user_tokens:
+            session.delete(token)
+        
+        session.commit()
+        
+        logger.info(f"User logged out from all devices: {user_email} ({token_count} tokens invalidated)")
+        return token_count
+        
+    except Exception as e:
+        logger.error(f"Error during logout all devices for {user_email}: {str(e)}")
+        session.rollback()
+        return 0
+
+
+def set_refresh_token_cookie(response: Response, refresh_token: str) -> None:
+    """
+    Set refresh token as HTTP-only cookie with secure settings.
+    
+    Args:
+        response: FastAPI Response object
+        refresh_token: The refresh token to set in cookie
+    """
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        max_age=30 * 24 * 60 * 60,  # 30 days in seconds
+        httponly=True,
+        secure=True,  # Use HTTPS in production
+        samesite="strict"
+    )
+
+
+def clear_refresh_token_cookie(response: Response) -> None:
+    """
+    Clear refresh token cookie.
+    
+    Args:
+        response: FastAPI Response object
+    """
+    response.delete_cookie(key="refresh_token")
