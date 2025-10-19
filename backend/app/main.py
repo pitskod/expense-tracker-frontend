@@ -6,9 +6,20 @@ from routers.users import router as users_router
 from routers.auth import router as auth_router
 from utils.db import create_db_and_tables
 from utils.middleware import AuthMiddleware
+from utils.scheduler import start_scheduler, stop_scheduler
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    create_db_and_tables()
+    start_scheduler()
+    yield
+    # Shutdown
+    stop_scheduler()
 
     
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 # Register authentication middleware to protect specific routes
 # Note: tuples with a single item require a trailing comma.

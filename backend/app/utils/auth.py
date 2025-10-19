@@ -122,3 +122,20 @@ def create_user(session: Session, email: str, name: str, password: str) -> User:
     logger.info(f"New user created: {email}")
     
     return user
+
+
+def update_user_password(session: Session, user: User, new_password: str) -> bool:
+    """Update a user's password with proper hashing."""
+    try:
+        hashed_password = get_password_hash(new_password)
+        user.password = hashed_password
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+        
+        logger.info(f"Password updated successfully for user: {user.email}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to update password for user {user.email}: {str(e)}")
+        session.rollback()
+        return False

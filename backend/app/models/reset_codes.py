@@ -31,3 +31,12 @@ class ForgotPasswordRequest(SQLModel):
 
 class ResetCodeResponse(SQLModel):
     message: str
+
+
+class RestorePasswordRequest(SQLModel):
+    reset_code: str = Field(min_length=6, max_length=8)
+    new_password: str = Field(min_length=8, max_length=50)
+
+
+class RestorePasswordResponse(SQLModel):
+    message: str
