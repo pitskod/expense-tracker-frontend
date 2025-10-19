@@ -5,3 +5,5 @@ export { Input } from './Input';
 export { InputLabel } from './InputLabel';
 export { Icon } from './Icon';
 export { DatePicker } from './DatePicker';
+export { AuthDesktopBackground } from './AuthDesktopBackground';
+export { AuthContent } from './AuthContent';

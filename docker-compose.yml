@@ -15,6 +15,11 @@ services:
     volumes:
       - ./src:/app/src
       - ./public:/app/public
+      - ./index.html:/app/index.html
+      - ./vite.config.ts:/app/vite.config.ts
+      - ./tsconfig.json:/app/tsconfig.json
+      - ./tsconfig.app.json:/app/tsconfig.app.json
+      - ./tsconfig.node.json:/app/tsconfig.node.json
 
   backend:
     build:
@@ -24,12 +29,6 @@ services:
       - "8000:8000"
     env_file:
       - ./backend/.env
-    environment:
-      - DB_HOST=db
-      - DB_PORT=5432
-      - DB_NAME=expense_tracker
-      - DB_USER=postgres
-      - DB_PASSWORD=postgres
     depends_on:
       - db
     volumes:
@@ -42,7 +41,7 @@ services:
       interval: 30s
       timeout: 5s
       retries: 5
-      start_period: 40s
+      start_period: 10s
 
   db:
     image: postgres:15-alpine

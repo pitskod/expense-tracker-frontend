@@ -9,6 +9,12 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 3000,
     strictPort: true,
+    watch: {
+      usePolling: true,  // Better file watching in Docker
+    },
+    hmr: {
+      port: 3000,  // Hot Module Replacement port
+    },
   },
   resolve: {
     alias: {
