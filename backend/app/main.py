@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from routers.expenses import router as expenses_router
 from routers.users import router as users_router
@@ -20,6 +21,18 @@ async def lifespan(app: FastAPI):
 
     
 app = FastAPI(lifespan=lifespan)
+
+# Configure CORS to allow frontend requests
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",  # Frontend dev server
+        "http://127.0.0.1:3000",  # Alternative localhost format
+    ],
+    allow_credentials=True,  # Allow cookies (for refresh token)
+    allow_methods=["*"],  # Allow all HTTP methods
+    allow_headers=["*"],  # Allow all headers
+)
 
 # Register authentication middleware to protect specific routes
 # Note: tuples with a single item require a trailing comma.

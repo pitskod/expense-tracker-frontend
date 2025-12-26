@@ -4,13 +4,18 @@ FROM python:3.12-slim
 # Set working directory
 WORKDIR /app
 
-# Install build dependencies and curl for health check
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Install build dependencies and curl for health check in a single layer
+# Using --mount=type=cache for apt cache to speed up rebuilds
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir uv
+# Install uv with pip cache
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --no-cache-dir uv
 
 # Copy dependency files
 COPY pyproject.toml uv.lock alembic.ini entrypoint.sh ./
@@ -18,7 +23,9 @@ COPY pyproject.toml uv.lock alembic.ini entrypoint.sh ./
 COPY migrations ./migrations
 
 # Install uv and project dependencies including uvicorn
-RUN uv sync --frozen --no-dev
+# Use cache mount for uv cache to speed up rebuilds
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev
 
 
 # Copy the rest of the application

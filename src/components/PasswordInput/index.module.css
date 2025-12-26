@@ -1,0 +1,78 @@
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.input {
+  width: 100%;
+  padding: 16px 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 16px;
+  color: #111827;
+  background-color: #f9fafb;
+  transition: border-color 0.2s, background-color 0.2s, color 0.2s;
+  box-sizing: border-box;
+  outline: none;
+}
+
+/* When input has a value, show black text on white background */
+.input:not(:placeholder-shown),
+.inputHasValue {
+  color: #111827;
+  background-color: white;
+}
+
+.input:focus {
+  border-color: #6366f1;
+  background-color: white;
+  color: #111827;
+}
+
+/* Override browser autofill styles - white background, black text */
+.input:-webkit-autofill,
+.input:-webkit-autofill:hover,
+.input:-webkit-autofill:focus,
+.input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px white inset !important;
+  box-shadow: 0 0 0 1000px white inset !important;
+  -webkit-text-fill-color: #111827 !important;
+  color: #111827 !important;
+  background-color: white !important;
+  background-clip: content-box;
+}
+
+.input:disabled {
+  background-color: #f3f4f6;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.input::placeholder {
+  color: #9ca3af;
+  font-size: 16px;
+}
+
+.inputError {
+  border-color: #ef4444 !important;
+}
+
+.inputError:focus {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.helperText {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.error {
+  font-size: 12px;
+  color: #ef4444;
+  margin-top: 4px;
+}
+

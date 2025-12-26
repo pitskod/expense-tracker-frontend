@@ -8,10 +8,12 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - VITE_API_URL=http://host.docker.internal:8000
+      - VITE_API_URL=http://localhost:8000
     depends_on:
       backend:
         condition: service_healthy
+    # Frontend can start in parallel with backend, just wait for it to be ready
+    restart: unless-stopped
     volumes:
       - ./src:/app/src
       - ./public:/app/public
@@ -30,18 +32,17 @@ services:
     env_file:
       - ./backend/.env
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     volumes:
       - ./backend/app:/app/app
       - ./backend/migrations:/app/migrations
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8000/docs" ]
-      interval: 30s
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/openapi.json" ]
+      interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
+      start_period: 30s
 
   db:
     image: postgres:15-alpine
@@ -53,6 +54,12 @@ services:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
+      start_period: 5s
 
 volumes:
   postgres_data:

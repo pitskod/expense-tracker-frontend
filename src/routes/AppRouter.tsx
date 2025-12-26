@@ -1,5 +1,5 @@
 import React from 'react';
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { createBrowserRouter, redirect, RouterProvider } from 'react-router-dom';
 import {
     SignIn,
     SignUp,
@@ -8,14 +8,24 @@ import {
     RestorePassword,
     Success,
     Expenses,
+    Profile,
     NotFound
 } from '../pages';
+import { ensureAuth } from '../utils/api';
 
 // Define all application routes
 const router = createBrowserRouter([
     {
         path: '/',
         element: <Expenses />,
+        loader: async () => {
+            try {
+                await ensureAuth();
+                return null;
+            } catch {
+                throw redirect('/sign-in');
+            }
+        },
         errorElement: <NotFound />,
     },
     {
@@ -41,6 +51,18 @@ const router = createBrowserRouter([
     {
         path: '/success',
         element: <Success />,
+    },
+    {
+        path: '/profile',
+        element: <Profile />,
+        loader: async () => {
+            try {
+                await ensureAuth();
+                return null;
+            } catch {
+                throw redirect('/sign-in');
+            }
+        },
     },
     {
         path: '*',

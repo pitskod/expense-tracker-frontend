@@ -1,4 +1,4 @@
 // Utility functions
 // Add your utility functions here
 
-export {};
+export { apiClient } from './api';

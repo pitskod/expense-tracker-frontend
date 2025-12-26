@@ -16,6 +16,10 @@ export default defineConfig({
       port: 3000,  // Hot Module Replacement port
     },
   },
+  // Optimize build performance
+  optimizeDeps: {
+    include: ['react', 'react-dom'],
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

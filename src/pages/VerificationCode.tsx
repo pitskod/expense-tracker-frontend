@@ -1,16 +1,52 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useForm, Controller } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
 import { Button, Input, AuthDesktopBackground, AuthContent } from '../components';
 import './auth.css';
 
+interface VerificationFormData {
+    code: string;
+}
+
+const schema = yup.object({
+    code: yup
+        .string()
+        .required('Reset code is required')
+        .min(6, 'Reset code must be at least 6 characters')
+        .max(8, 'Reset code must be at most 8 characters'),
+});
+
 const VerificationCode: React.FC = () => {
-    const [code, setCode] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState<string | null>(null);
+    const location = useLocation();
     const navigate = useNavigate();
 
-    const handleVerify = () => {
-        if (code.length >= 4) {
-            console.log('Verification code:', code);
-            navigate('/restore-password');
+    const state = (location.state || {}) as { email?: string };
+    const email = state.email;
+
+    const {
+        control,
+        handleSubmit,
+        formState: { errors },
+    } = useForm<VerificationFormData>({
+        resolver: yupResolver(schema),
+        mode: 'onSubmit',
+    });
+
+    const onSubmit = async (data: VerificationFormData) => {
+        setSubmitError(null);
+        setIsSubmitting(true);
+        try {
+            navigate('/restore-password', {
+                state: { email, reset_code: data.code },
+            });
+        } catch (e) {
+            setSubmitError(e instanceof Error ? e.message : 'Failed to continue.');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -36,30 +72,64 @@ const VerificationCode: React.FC = () => {
                 <div className="verification-info">
                     <p style={{ color: '#718096', margin: '1rem 0', textAlign: 'center' }}>
                         We have sent you a code to verify your email <br />
-                        <span className="verification-email">email@gmail.com</span>
+                        <span className="verification-email">{email || 'your email'}</span>
                     </p>
                     <p style={{ color: '#718096', fontSize: '0.9rem', textAlign: 'center' }}>
                         This code expires in 60 minutes
                     </p>
                 </div>
 
-                <form className="auth-form" onSubmit={(e) => { e.preventDefault(); handleVerify(); }}>
+                {submitError && (
+                    <div
+                        style={{
+                            padding: '12px',
+                            backgroundColor: '#fee2e2',
+                            color: '#991b1b',
+                            borderRadius: '8px',
+                            marginBottom: '1rem',
+                            fontSize: '0.9rem',
+                            textAlign: 'center',
+                        }}
+                    >
+                        {submitError}
+                    </div>
+                )}
+
+                {!email && (
+                    <div style={{ marginBottom: '1rem', textAlign: 'center', fontSize: '0.9rem', color: '#718096' }}>
+                        Please go back and submit your email first.{' '}
+                        <Link to="/forgot-password" className="auth-link">Back</Link>
+                    </div>
+                )}
+
+                <form className="auth-form" onSubmit={handleSubmit(onSubmit)}>
                     <div className="form-group">
-                        <Input
-                            type="text"
-                            placeholder="Verification Code"
-                            onChange={setCode}
+                        <Controller
+                            name="code"
+                            control={control}
+                            render={({ field }) => (
+                                <Input
+                                    type="text"
+                                    placeholder="Reset code"
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    onBlur={field.onBlur}
+                                    disabled={isSubmitting || !email}
+                                    error={!!errors.code}
+                                    helperText={errors.code?.message}
+                                />
+                            )}
                         />
                     </div>
 
-                    <Button onClick={handleVerify}>
-                        Verify Code
+                    <Button type="submit" disabled={isSubmitting || !email}>
+                        {isSubmitting ? 'Checking...' : 'Continue'}
                     </Button>
                 </form>
 
                 <div className="auth-footer">
                     <p className="resend-text">
-                        Change your phone number? <Link to="/forgot-password" className="auth-link">Change</Link>
+                        Change your email? <Link to="/forgot-password" className="auth-link">Change</Link>
                     </p>
                 </div>
             </AuthContent>

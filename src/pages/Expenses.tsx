@@ -1,15 +1,41 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { apiClient, logout } from '../utils/api';
 
 const Expenses: React.FC = () => {
-    // Sample expense data for the placeholder table
-    const sampleExpenses = [
-        { id: 1, date: '2024-01-15', description: 'Groceries', amount: 85.50, category: 'Food' },
-        { id: 2, date: '2024-01-14', description: 'Gas Station', amount: 45.00, category: 'Transportation' },
-        { id: 3, date: '2024-01-13', description: 'Coffee Shop', amount: 12.75, category: 'Food' },
-        { id: 4, date: '2024-01-12', description: 'Internet Bill', amount: 65.00, category: 'Utilities' },
-        { id: 5, date: '2024-01-11', description: 'Movie Tickets', amount: 28.00, category: 'Entertainment' },
-    ];
+    const navigate = useNavigate();
+    const [expenses, setExpenses] = useState<Array<{
+        id: number;
+        name: string;
+        amount: number;
+        currency: string;
+        category: string;
+        date: string | null;
+    }>>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        let mounted = true;
+        (async () => {
+            try {
+                setLoading(true);
+                setError(null);
+                const res = await apiClient.get('/api/expenses');
+                if (!mounted) return;
+                setExpenses(res.data);
+            } catch (e) {
+                if (!mounted) return;
+                setError(e instanceof Error ? e.message : 'Failed to load expenses');
+            } finally {
+                if (!mounted) return;
+                setLoading(false);
+            }
+        })();
+        return () => {
+            mounted = false;
+        };
+    }, []);
 
     const tableStyles: React.CSSProperties = {
         width: '100%',
@@ -29,58 +55,110 @@ const Expenses: React.FC = () => {
         fontWeight: 'bold'
     };
 
+    const rows = useMemo(() => expenses, [expenses]);
+
+    const handleSignOut = async () => {
+        await logout();
+        navigate('/sign-in');
+    };
+
     return (
         <div style={{ padding: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <h1>Expense Tracker</h1>
-                <nav style={{ display: 'flex', gap: '1rem' }}>
-                    <Link to="/sign-in" style={{ textDecoration: 'none', padding: '0.5rem 1rem', backgroundColor: '#007bff', color: 'white', borderRadius: '4px' }}>
-                        Sign In
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <Link
+                        to="/profile"
+                        title="Profile"
+                        aria-label="Profile"
+                        style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '999px',
+                            border: '1px solid #e5e7eb',
+                            background: 'white',
+                            color: '#111827',
+                            textDecoration: 'none',
+                        }}
+                    >
+                        {/* simple profile icon */}
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path
+                                d="M20 21a8 8 0 1 0-16 0"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                            />
+                            <path
+                                d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                        </svg>
                     </Link>
-                    <Link to="/sign-up" style={{ textDecoration: 'none', padding: '0.5rem 1rem', backgroundColor: '#28a745', color: 'white', borderRadius: '4px' }}>
-                        Sign Up
-                    </Link>
-                </nav>
+
+                    <button
+                        onClick={handleSignOut}
+                        style={{
+                            textDecoration: 'none',
+                            padding: '0.5rem 1rem',
+                            backgroundColor: '#6c757d',
+                            color: 'white',
+                            borderRadius: '4px',
+                            border: 'none',
+                            cursor: 'pointer',
+                        }}
+                    >
+                        Sign out
+                    </button>
+                </div>
             </div>
 
             <div style={{ marginBottom: '1rem' }}>
                 <h2>Your Expenses</h2>
-                <p>This is a placeholder table showing sample expense data. Future implementation will show user-specific expenses.</p>
+                <p style={{ color: '#6b7280' }}>
+                    This table is protected and shows only expenses belonging to the signed-in user.
+                </p>
             </div>
+
+            {loading && <div>Loading...</div>}
+            {error && <div style={{ color: '#991b1b' }}>{error}</div>}
 
             <table style={tableStyles}>
                 <thead>
                     <tr>
                         <th style={headerStyles}>Date</th>
-                        <th style={headerStyles}>Description</th>
+                        <th style={headerStyles}>Name</th>
                         <th style={headerStyles}>Amount</th>
+                        <th style={headerStyles}>Currency</th>
                         <th style={headerStyles}>Category</th>
-                        <th style={headerStyles}>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {sampleExpenses.map((expense) => (
-                        <tr key={expense.id}>
-                            <td style={cellStyles}>{expense.date}</td>
-                            <td style={cellStyles}>{expense.description}</td>
-                            <td style={cellStyles}>${expense.amount.toFixed(2)}</td>
-                            <td style={cellStyles}>{expense.category}</td>
-                            <td style={cellStyles}>
-                                <button style={{ marginRight: '0.5rem', padding: '0.25rem 0.5rem', backgroundColor: '#ffc107', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                                    Edit
-                                </button>
-                                <button style={{ padding: '0.25rem 0.5rem', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                                    Delete
-                                </button>
+                    {!loading && rows.length === 0 ? (
+                        <tr>
+                            <td style={cellStyles} colSpan={5}>
+                                No expenses yet.
                             </td>
                         </tr>
-                    ))}
+                    ) : (
+                        rows.map((expense) => (
+                            <tr key={expense.id}>
+                                <td style={cellStyles}>{expense.date ? new Date(expense.date).toLocaleDateString() : '-'}</td>
+                                <td style={cellStyles}>{expense.name}</td>
+                                <td style={cellStyles}>{expense.amount.toFixed(2)}</td>
+                                <td style={cellStyles}>{expense.currency}</td>
+                                <td style={cellStyles}>{expense.category}</td>
+                            </tr>
+                        ))
+                    )}
                 </tbody>
             </table>
-
-            <div style={{ marginTop: '2rem', textAlign: 'center' }}>
-                <p>Want to manage your expenses? Please <Link to="/sign-in">sign in</Link> or <Link to="/sign-up">create an account</Link>.</p>
-            </div>
         </div>
     );
 };

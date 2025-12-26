@@ -3,7 +3,7 @@ import smtplib
 import ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from typing import List, Optional
+from typing import Optional
 import logging
 from app.config.config import app_config
 from jinja2 import Template
@@ -19,6 +19,13 @@ class EmailService:
         self.sender_email = app_config.email.sender_email
         self.sender_password = app_config.email.sender_password
         self.sender_name = app_config.email.sender_name
+
+        logger.info(
+            "EmailService configured: smtp_server=%s smtp_port=%s sender_email=%s",
+            self.smtp_server,
+            self.smtp_port,
+            self.sender_email,
+        )
 
     async def send_email(
         self,
@@ -61,10 +68,13 @@ class EmailService:
         
         try:
             with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
-                server.starttls(context=context)
-                # Enable debug output for troubleshooting
-                server.set_debuglevel(1) if logger.isEnabledFor(logging.DEBUG) else None
-                server.login(self.sender_email, self.sender_password)
+                # MailHog (port 1025) is plain SMTP with no TLS/auth by default.
+                if self.smtp_port != 1025:
+                    server.starttls(context=context)
+
+                # Only login when credentials are provided (MailHog doesn't need auth).
+                if self.sender_email and self.sender_password and self.smtp_port != 1025:
+                    server.login(self.sender_email, self.sender_password)
                 server.send_message(message)
                 logger.info(f"SMTP email sent successfully using {self.sender_email}")
         except smtplib.SMTPAuthenticationError as e:

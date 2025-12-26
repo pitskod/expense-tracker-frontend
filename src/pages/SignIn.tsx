@@ -1,17 +1,40 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button, Input, AuthDesktopBackground, AuthContent } from '../components';
+import { apiClient, setAccessToken } from '../utils/api';
 import './auth.css';
 
 const SignIn: React.FC = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState<string | null>(null);
     const navigate = useNavigate();
 
-    const handleSignIn = () => {
-        // TODO: Implement actual sign in logic
-        console.log('Sign in with:', { email, password });
-        navigate('/');
+    const handleSignIn = async () => {
+        setSubmitError(null);
+
+        if (!email.trim() || !password.trim()) {
+            setSubmitError('Please fill in email and password.');
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const res = await apiClient.post<{ access_token: string; token_type: string }>(
+                '/api/auth/sign-in',
+                { email, password }
+            );
+
+            // Store access token ONLY in closure (no storage)
+            setAccessToken(res.data.access_token);
+
+            navigate('/');
+        } catch (e) {
+            setSubmitError(e instanceof Error ? e.message : 'Sign in failed. Please try again.');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -35,12 +58,29 @@ const SignIn: React.FC = () => {
                     <p className="auth-subtitle">Hello there, sign in to continue</p>
                 </div>
 
+                {submitError && (
+                    <div
+                        style={{
+                            padding: '12px',
+                            backgroundColor: '#fee2e2',
+                            color: '#991b1b',
+                            borderRadius: '8px',
+                            marginBottom: '1rem',
+                            fontSize: '0.9rem',
+                            textAlign: 'center',
+                        }}
+                    >
+                        {submitError}
+                    </div>
+                )}
+
                 <form className="auth-form" onSubmit={(e) => { e.preventDefault(); handleSignIn(); }}>
                     <div className="form-group">
                         <Input
                             type="email"
                             placeholder="Email"
                             onChange={setEmail}
+                            disabled={isSubmitting}
                         />
                     </div>
 
@@ -49,6 +89,7 @@ const SignIn: React.FC = () => {
                             type="password"
                             placeholder="Password"
                             onChange={setPassword}
+                            disabled={isSubmitting}
                         />
                     </div>
 
@@ -56,8 +97,8 @@ const SignIn: React.FC = () => {
                         <Link to="/forgot-password">Forgot your password ?</Link>
                     </div>
 
-                    <Button onClick={handleSignIn}>
-                        Sign In
+                    <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting ? 'Signing in...' : 'Sign In'}
                     </Button>
                 </form>
 

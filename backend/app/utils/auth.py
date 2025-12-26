@@ -210,13 +210,17 @@ def set_refresh_token_cookie(response: Response, refresh_token: str) -> None:
         response: FastAPI Response object
         refresh_token: The refresh token to set in cookie
     """
+    import os
+    # Use secure=False in development (localhost), secure=True in production (HTTPS)
+    is_production = os.getenv("APP_ENV", "development") == "production"
+    
     response.set_cookie(
         key="refresh_token",
         value=refresh_token,
         max_age=30 * 24 * 60 * 60,  # 30 days in seconds
         httponly=True,
-        secure=True,  # Use HTTPS in production
-        samesite="strict"
+        secure=is_production,  # Use HTTPS in production only
+        samesite="lax"  # Changed from "strict" to "lax" for better cross-site compatibility
     )
 
 
@@ -227,4 +231,11 @@ def clear_refresh_token_cookie(response: Response) -> None:
     Args:
         response: FastAPI Response object
     """
-    response.delete_cookie(key="refresh_token")
+    import os
+    # Must match cookie attributes to ensure deletion in browsers.
+    is_production = os.getenv("APP_ENV", "development") == "production"
+    response.delete_cookie(
+        key="refresh_token",
+        secure=is_production,
+        samesite="lax",
+    )

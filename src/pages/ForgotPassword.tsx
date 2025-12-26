@@ -1,16 +1,37 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button, Input, AuthDesktopBackground, AuthContent } from '../components';
+import { apiClient } from '../utils/api';
 import './auth.css';
 
 const ForgotPassword: React.FC = () => {
     const [email, setEmail] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState<string | null>(null);
     const navigate = useNavigate();
 
-    const handleSendCode = () => {
-        // TODO: Implement actual forgot password logic
-        console.log('Send reset code to:', email);
-        navigate('/verification-code');
+    const handleSendCode = async () => {
+        setSubmitError(null);
+
+        if (!email.trim()) {
+            setSubmitError('Please enter your email.');
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            await apiClient.post<{ message: string }>(
+                '/api/auth/forgot-password',
+                { email }
+            );
+
+            // Move user to the next step in the flow
+            navigate('/verification-code', { state: { email } });
+        } catch (e) {
+            setSubmitError(e instanceof Error ? e.message : 'Failed to send reset code.');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -30,8 +51,24 @@ const ForgotPassword: React.FC = () => {
             <AuthContent>
                 <div className="auth-header">
                     <h1 className="auth-title">Forgot password</h1>
-                    <p className="auth-subtitle">Type your phone number</p>
+                    <p className="auth-subtitle">We will text you a code to verify it is you</p>
                 </div>
+
+                {submitError && (
+                    <div
+                        style={{
+                            padding: '12px',
+                            backgroundColor: '#fee2e2',
+                            color: '#991b1b',
+                            borderRadius: '8px',
+                            marginBottom: '1rem',
+                            fontSize: '0.9rem',
+                            textAlign: 'center',
+                        }}
+                    >
+                        {submitError}
+                    </div>
+                )}
 
                 <form className="auth-form" onSubmit={(e) => { e.preventDefault(); handleSendCode(); }}>
                     <div className="form-group">
@@ -39,15 +76,13 @@ const ForgotPassword: React.FC = () => {
                             type="email"
                             placeholder="Email"
                             onChange={setEmail}
+                            disabled={isSubmitting}
                         />
                     </div>
 
-                    <p style={{ fontSize: '0.9rem', color: '#718096', margin: '1rem 0', textAlign: 'center' }}>
-                        We will send you a code to verify it's you
-                    </p>
 
-                    <Button onClick={handleSendCode}>
-                        Send
+                    <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting ? 'Sending...' : 'Send'}
                     </Button>
                 </form>
 

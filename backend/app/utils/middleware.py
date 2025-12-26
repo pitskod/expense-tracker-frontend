@@ -27,6 +27,11 @@ class AuthMiddleware(BaseHTTPMiddleware):
         self.exclude_prefixes = tuple(exclude_prefixes or ("/api/auth", "/docs", "/openapi.json", "/redoc"))
 
     async def dispatch(self, request: Request, call_next: Callable[[Request], Response]) -> Response:
+        # Allow CORS preflight requests through without authentication.
+        # Browsers send OPTIONS requests before the real request; blocking them breaks CORS.
+        if request.method.upper() == "OPTIONS":
+            return await call_next(request)
+
         path = request.url.path
 
         # Skip middleware for non-protected paths or explicitly excluded prefixes

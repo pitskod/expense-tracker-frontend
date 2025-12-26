@@ -3,7 +3,6 @@
   flex-direction: column;
   gap: 8px;
   width: 100%;
-  max-width: 327px;
 }
 
 .input {
@@ -14,15 +13,44 @@
   font-size: 16px;
   color: #9ca3af;
   background-color: #f9fafb;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, background-color 0.2s, color 0.2s;
   box-sizing: border-box;
   outline: none;
+}
+
+/* When input has a value (not placeholder), show black text on white background */
+.input:not(:placeholder-shown),
+.inputHasValue {
+  color: #111827;
+  background-color: white;
 }
 
 .input:focus {
   border-color: #6366f1;
   background-color: white;
   color: #111827;
+}
+
+/* Override browser autofill styles - white background, black text */
+.input:-webkit-autofill,
+.input:-webkit-autofill:hover,
+.input:-webkit-autofill:focus,
+.input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px white inset !important;
+  box-shadow: 0 0 0 1000px white inset !important;
+  -webkit-text-fill-color: #111827 !important;
+  color: #111827 !important;
+  background-color: white !important;
+  background-clip: content-box;
+}
+
+.inputError {
+  border-color: #ef4444 !important;
+}
+
+.inputError:focus {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
 }
 
 .input:disabled {

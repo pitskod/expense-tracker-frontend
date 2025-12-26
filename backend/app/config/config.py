@@ -33,12 +33,24 @@ class EmailConfig:
     """Email configuration from environment variables"""
 
     def __init__(self):
-        self.smtp_server: str = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+        # Support both naming conventions:
+        # - SMTP_SERVER / SMTP_PORT / SENDER_EMAIL / SENDER_PASSWORD (original)
+        # - SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASSWORD (mailhog-style)
         self.smtp_port: int = int(os.getenv("SMTP_PORT", "587"))
-        self.sender_email: str = os.getenv("SENDER_EMAIL", "")
-        self.sender_password: str = os.getenv("SENDER_PASSWORD", "")
+        # If host isn't specified and you're using a typical local dev SMTP port, default to localhost.
+        self.smtp_server: str = (
+            os.getenv("SMTP_SERVER")
+            or os.getenv("SMTP_HOST")
+            or ("localhost" if self.smtp_port == 1025 else "smtp.gmail.com")
+        )
+
+        # Prefer explicit sender email, otherwise fall back to SMTP_USER
+        self.sender_email: str = os.getenv("SENDER_EMAIL") or os.getenv("SMTP_USER") or ""
+        self.sender_password: str = os.getenv("SENDER_PASSWORD") or os.getenv("SMTP_PASSWORD") or ""
         self.sender_name: str = os.getenv("SENDER_NAME", "Expense Tracker")
         self.frontend_url: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
+        # Optional: in dev you can route ALL outgoing emails to a single inbox
+        self.email_to: str = os.getenv("EMAIL_TO", "")
     
 
 class AppConfig:

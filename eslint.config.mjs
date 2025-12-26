@@ -14,9 +14,10 @@ export default [
       ecmaVersion: 2020,
       globals: globals.browser,
       parser: tseslint.parser,
-      parserOptions: {
-        project: './tsconfig.json'
-      }
+      // Removed project option for faster linting - type checking is handled by TypeScript compiler
+      // parserOptions: {
+      //   project: './tsconfig.json'
+      // }
     },
     plugins: {
       'react-hooks': reactHooks,
