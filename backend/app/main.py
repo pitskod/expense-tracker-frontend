@@ -28,6 +28,10 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",  # Frontend dev server
         "http://127.0.0.1:3000",  # Alternative localhost format
+        "http://localhost:5173",  # Vite default dev port (if used)
+        "http://127.0.0.1:5173",
+        "http://localhost:6006",  # Storybook default dev port
+        "http://127.0.0.1:6006",
     ],
     allow_credentials=True,  # Allow cookies (for refresh token)
     allow_methods=["*"],  # Allow all HTTP methods

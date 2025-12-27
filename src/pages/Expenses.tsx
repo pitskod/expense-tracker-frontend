@@ -1,19 +1,93 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiClient, logout } from '../utils/api';
+import { Button, DatePicker, Icon, Input, InputLabel, Loader, Logo } from '@/components';
+import type { Category } from '@/types';
+import styles from './Expenses.module.css';
+
+type Expense = {
+    id: number;
+    name: string;
+    amount: number;
+    currency: string;
+    category: string;
+    date: string | null;
+};
+
+type CreateExpensePayload = {
+    name: string;
+    amount: number;
+    currency: string;
+    category: string;
+    date: string | null;
+};
+
+const categoryOptions: Category[] = [
+    'mobile',
+    'credit',
+    'other_payment',
+    'hobby',
+    'subscription',
+    'transport',
+    'restaurant',
+    'utility',
+    'shopping',
+    'debt',
+];
+
+const currencyOptions = ['USD', 'EUR', 'GBP'] as const;
+
+function formatDate(date: string | null): string {
+    if (!date) return '-';
+    const d = new Date(date);
+    if (Number.isNaN(d.getTime())) return '-';
+    return d.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function getCurrencySymbol(currency: string): string {
+    switch (currency) {
+        case 'USD':
+            return '$';
+        case 'EUR':
+            return '€';
+        case 'GBP':
+            return '£';
+        default:
+            return currency;
+    }
+}
+
+function formatAmount(amount: number, currency: string): string {
+    const formattedAmount = Number.isFinite(amount) ? amount.toLocaleString() : String(amount);
+    const symbol = getCurrencySymbol(currency);
+    return `-${symbol}${formattedAmount}`;
+}
+
+function getTodayDateString(): string {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
 
 const Expenses: React.FC = () => {
     const navigate = useNavigate();
-    const [expenses, setExpenses] = useState<Array<{
-        id: number;
-        name: string;
-        amount: number;
-        currency: string;
-        category: string;
-        date: string | null;
-    }>>([]);
+    const [expenses, setExpenses] = useState<Expense[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [drawerOpen, setDrawerOpen] = useState(false);
+    const [editingExpenseId, setEditingExpenseId] = useState<number | null>(null);
+    const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
+
+    // Create form state
+    const [createName, setCreateName] = useState('');
+    const [createAmount, setCreateAmount] = useState('');
+    const [createCurrency, setCreateCurrency] = useState<(typeof currencyOptions)[number]>('USD');
+    const [createCategory, setCreateCategory] = useState<Category>('hobby');
+    const [createDate, setCreateDate] = useState(getTodayDateString()); // yyyy-mm-dd (from native date input)
+    const [creating, setCreating] = useState(false);
+    const [createError, setCreateError] = useState<string | null>(null);
 
     useEffect(() => {
         let mounted = true;
@@ -37,23 +111,21 @@ const Expenses: React.FC = () => {
         };
     }, []);
 
-    const tableStyles: React.CSSProperties = {
-        width: '100%',
-        borderCollapse: 'collapse',
-        marginTop: '1rem'
-    };
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            const target = event.target as HTMLElement;
+            if (!target.closest(`.${styles.actionMenuContainer}`)) {
+                setMenuOpenId(null);
+            }
+        };
 
-    const cellStyles: React.CSSProperties = {
-        border: '1px solid #ddd',
-        padding: '12px',
-        textAlign: 'left'
-    };
-
-    const headerStyles: React.CSSProperties = {
-        ...cellStyles,
-        backgroundColor: '#f2f2f2',
-        fontWeight: 'bold'
-    };
+        if (menuOpenId !== null) {
+            document.addEventListener('click', handleClickOutside);
+            return () => {
+                document.removeEventListener('click', handleClickOutside);
+            };
+        }
+    }, [menuOpenId]);
 
     const rows = useMemo(() => expenses, [expenses]);
 
@@ -62,103 +134,307 @@ const Expenses: React.FC = () => {
         navigate('/sign-in');
     };
 
-    return (
-        <div style={{ padding: '2rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                <h1>Expense Tracker</h1>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <Link
-                        to="/profile"
-                        title="Profile"
-                        aria-label="Profile"
-                        style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: '40px',
-                            height: '40px',
-                            borderRadius: '999px',
-                            border: '1px solid #e5e7eb',
-                            background: 'white',
-                            color: '#111827',
-                            textDecoration: 'none',
-                        }}
-                    >
-                        {/* simple profile icon */}
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                            <path
-                                d="M20 21a8 8 0 1 0-16 0"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                            />
-                            <path
-                                d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            />
-                        </svg>
-                    </Link>
+    const resetCreateForm = () => {
+        setCreateName('');
+        setCreateAmount('');
+        setCreateCurrency('USD');
+        setCreateCategory('hobby');
+        setCreateDate(getTodayDateString());
+        setCreateError(null);
+        setEditingExpenseId(null);
+    };
 
-                    <button
-                        onClick={handleSignOut}
-                        style={{
-                            textDecoration: 'none',
-                            padding: '0.5rem 1rem',
-                            backgroundColor: '#6c757d',
-                            color: 'white',
-                            borderRadius: '4px',
-                            border: 'none',
-                            cursor: 'pointer',
-                        }}
-                    >
-                        Sign out
+    const formatDateForInput = (date: string | null): string => {
+        if (!date) return getTodayDateString();
+        const d = new Date(date);
+        if (Number.isNaN(d.getTime())) return getTodayDateString();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const handleEditExpense = (expense: Expense) => {
+        setCreateName(expense.name);
+        setCreateAmount(String(expense.amount));
+        setCreateCurrency(expense.currency as (typeof currencyOptions)[number]);
+        setCreateCategory(expense.category as Category);
+        setCreateDate(formatDateForInput(expense.date));
+        setEditingExpenseId(expense.id);
+        setMenuOpenId(null);
+        setDrawerOpen(true);
+    };
+
+    const handleDeleteExpense = async (id: number) => {
+        if (!confirm('Are you sure you want to delete this expense?')) return;
+        
+        try {
+            await apiClient.delete(`/api/expenses/${id}`);
+            setExpenses((prev) => prev.filter((exp) => exp.id !== id));
+            setMenuOpenId(null);
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'Failed to delete expense');
+        }
+    };
+
+    const handleCreateExpense = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setCreateError(null);
+
+        const trimmedName = createName.trim();
+        const amountNum = Number(createAmount);
+
+        if (!trimmedName) return setCreateError('Name is required');
+        if (!Number.isFinite(amountNum) || amountNum <= 0) return setCreateError('Amount must be greater than 0');
+        if (!createCurrency) return setCreateError('Currency is required');
+        if (!createCategory) return setCreateError('Category is required');
+
+        const payload: CreateExpensePayload = {
+            name: trimmedName,
+            amount: amountNum,
+            currency: createCurrency,
+            category: createCategory,
+            date: createDate ? new Date(createDate).toISOString() : null,
+        };
+
+        try {
+            setCreating(true);
+            if (editingExpenseId) {
+                // Update existing expense
+                const res = await apiClient.patch(`/api/expenses/${editingExpenseId}`, payload);
+                setExpenses((prev) => prev.map((exp) => (exp.id === editingExpenseId ? (res.data as Expense) : exp)));
+            } else {
+                // Create new expense
+                const res = await apiClient.post('/api/expenses', payload);
+                setExpenses((prev) => [res.data as Expense, ...prev]);
+            }
+            resetCreateForm();
+            // keep open on desktop; close on mobile
+            if (!window.matchMedia('(min-width: 1100px)').matches) setDrawerOpen(false);
+        } catch (err) {
+            setCreateError(err instanceof Error ? err.message : editingExpenseId ? 'Failed to update expense' : 'Failed to create expense');
+        } finally {
+            setCreating(false);
+        }
+    };
+
+    return (
+        <div className={styles.page}>
+            <header className={styles.header}>
+                <div className={styles.logoWrap} aria-label="YAET">
+                    <Logo />
+                </div>
+                <div className={styles.headerActions}>
+                    <Link to="/profile" className={styles.headerTextAction}>
+                        Profile
+                    </Link>
+                    <button className={styles.headerTextAction} type="button" onClick={handleSignOut}>
+                        Log out
                     </button>
                 </div>
+            </header>
+
+            <div className={styles.layout}>
+                <main className={styles.content}>
+                    <div className={styles.tableCard}>
+                        <table className={styles.table}>
+                            <thead>
+                                <tr>
+                                    <th className={styles.th}></th>
+                                    <th className={styles.th}>Name</th>
+                                    <th className={styles.th}>Category</th>
+                                    <th className={styles.th}>Date</th>
+                                    <th className={styles.th}>Total</th>
+                                    <th className={styles.th}></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {loading ? (
+                                    <tr className={styles.row}>
+                                        <td className={styles.td} colSpan={6}>
+                                            <Loader />
+                                        </td>
+                                    </tr>
+                                ) : error ? (
+                                    <tr className={styles.row}>
+                                        <td className={styles.td} colSpan={6}>
+                                            <div className={styles.errorBanner}>{error}</div>
+                                        </td>
+                                    </tr>
+                                ) : rows.length === 0 ? (
+                                    <tr className={styles.row}>
+                                        <td className={`${styles.td} ${styles.emptyCell}`} colSpan={6}>
+                                            <div className={styles.emptyWrap}>
+                                                <div className={styles.emptyTitle}>The list of transactions are empty</div>
+                                                <p className={styles.emptySubtitle}>
+                                                    start to add a new one&nbsp; by clicking add button in the left bottom corner of your screen
+                                                </p>
+                                                <img
+                                                    className={styles.emptyImg}
+                                                    src="/no_transactions.svg"
+                                                    alt="No transactions"
+                                                />
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    rows.map((expense) => {
+                                        const iconCandidate = expense.category as Category;
+                                        const canRenderIcon = categoryOptions.includes(iconCandidate);
+                                        return (
+                                            <tr className={styles.row} key={expense.id}>
+                                                <td className={styles.td}>
+                                                    <input type="checkbox" className={styles.checkbox} />
+                                                </td>
+                                                <td className={styles.td}>
+                                                    <div className={styles.nameCell}>
+                                                        <span className={styles.iconBox} aria-hidden="true">
+                                                            {canRenderIcon ? <Icon icon={iconCandidate} size={18} color="white" /> : null}
+                                                        </span>
+                                                        <span className={styles.expenseName}>{expense.name}</span>
+                                                    </div>
+                                                </td>
+                                                <td className={styles.td}>
+                                                    <span className={styles.muted}>{expense.category}</span>
+                                                </td>
+                                                <td className={styles.td}>
+                                                    <span className={styles.muted}>{formatDate(expense.date)}</span>
+                                                </td>
+                                                <td className={styles.td}>
+                                                    <span className={styles.totalAmount}>
+                                                        {formatAmount(expense.amount, expense.currency)}
+                                                    </span>
+                                                </td>
+                                                <td className={styles.td}>
+                                                    <div className={styles.actionMenuContainer}>
+                                                        <button
+                                                            type="button"
+                                                            className={styles.menuButton}
+                                                            onClick={() => setMenuOpenId(menuOpenId === expense.id ? null : expense.id)}
+                                                            aria-label="More options"
+                                                        >
+                                                            ⋯
+                                                        </button>
+                                                        {menuOpenId === expense.id && (
+                                                            <div className={styles.menuDropdown}>
+                                                                <button
+                                                                    type="button"
+                                                                    className={styles.menuItem}
+                                                                    onClick={() => handleEditExpense(expense)}
+                                                                >
+                                                                    Edit
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    className={styles.menuItem}
+                                                                    onClick={() => handleDeleteExpense(expense.id)}
+                                                                >
+                                                                    Delete
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </main>
+
+                            <button
+                                type="button"
+                                className={styles.fab}
+                                aria-label="Add transaction"
+                                title="Add"
+                                onClick={() => { resetCreateForm(); setDrawerOpen(true); }}
+                            >
+                                +
+                            </button>
+
+                {drawerOpen && <div className={styles.backdrop} onClick={() => { setDrawerOpen(false); resetCreateForm(); }} />}
+
+                {drawerOpen && (
+                    <aside className={styles.drawer} aria-label={editingExpenseId ? "Edit expense drawer" : "Create expense drawer"}>
+                        <div className={styles.drawerTitle}>{editingExpenseId ? 'Edit expense' : 'Create expense'}</div>
+                        <form className={styles.drawerForm} onSubmit={handleCreateExpense}>
+                            {createError && <div className={styles.errorBanner}>{createError}</div>}
+
+                            <div className={styles.field}>
+                                <InputLabel>Name</InputLabel>
+                                <Input placeholder="Text input" value={createName} onChange={setCreateName} />
+                            </div>
+
+                            <div className={styles.field}>
+                                <InputLabel>Payment amount</InputLabel>
+                                <div className={styles.amountRow}>
+                                    <Input
+                                        placeholder="0"
+                                        type="number"
+                                        value={createAmount}
+                                        onChange={setCreateAmount}
+                                    />
+                                    <select
+                                        className={styles.select}
+                                        value={createCurrency}
+                                        onChange={(e) => setCreateCurrency(e.target.value as (typeof currencyOptions)[number])}
+                                        aria-label="Currency"
+                                    >
+                                        {currencyOptions.map((c) => (
+                                            <option key={c} value={c}>
+                                                {c}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className={styles.field}>
+                                <InputLabel>Select category</InputLabel>
+                                <div className={styles.categoryGrid}>
+                                    {categoryOptions.map((cat) => {
+                                        const selected = createCategory === cat;
+                                        return (
+                                            <button
+                                                key={cat}
+                                                type="button"
+                                                className={`${styles.categoryBtn} ${selected ? styles.categoryBtnSelected : ''}`}
+                                                onClick={() => setCreateCategory(cat)}
+                                                aria-label={`Category ${cat}`}
+                                                title={cat}
+                                            >
+                                                <Icon icon={cat} size={20} color="grey" />
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            <div className={styles.field}>
+                                <InputLabel>Select date</InputLabel>
+                                <DatePicker value={createDate} onChange={setCreateDate} />
+                            </div>
+
+                            <div className={styles.drawerFooter}>
+                                <button
+                                    type="button"
+                                    className={styles.closeFab}
+                                    onClick={() => { setDrawerOpen(false); resetCreateForm(); }}
+                                    aria-label="Close"
+                                    title="Close"
+                                >
+                                    ×
+                                </button>
+                                <Button type="submit" disabled={creating}>
+                                    {creating ? (editingExpenseId ? 'Updating…' : 'Creating…') : (editingExpenseId ? 'Update' : 'Create')}
+                                </Button>
+                            </div>
+                        </form>
+                    </aside>
+                )}
             </div>
-
-            <div style={{ marginBottom: '1rem' }}>
-                <h2>Your Expenses</h2>
-                <p style={{ color: '#6b7280' }}>
-                    This table is protected and shows only expenses belonging to the signed-in user.
-                </p>
-            </div>
-
-            {loading && <div>Loading...</div>}
-            {error && <div style={{ color: '#991b1b' }}>{error}</div>}
-
-            <table style={tableStyles}>
-                <thead>
-                    <tr>
-                        <th style={headerStyles}>Date</th>
-                        <th style={headerStyles}>Name</th>
-                        <th style={headerStyles}>Amount</th>
-                        <th style={headerStyles}>Currency</th>
-                        <th style={headerStyles}>Category</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {!loading && rows.length === 0 ? (
-                        <tr>
-                            <td style={cellStyles} colSpan={5}>
-                                No expenses yet.
-                            </td>
-                        </tr>
-                    ) : (
-                        rows.map((expense) => (
-                            <tr key={expense.id}>
-                                <td style={cellStyles}>{expense.date ? new Date(expense.date).toLocaleDateString() : '-'}</td>
-                                <td style={cellStyles}>{expense.name}</td>
-                                <td style={cellStyles}>{expense.amount.toFixed(2)}</td>
-                                <td style={cellStyles}>{expense.currency}</td>
-                                <td style={cellStyles}>{expense.category}</td>
-                            </tr>
-                        ))
-                    )}
-                </tbody>
-            </table>
         </div>
     );
 };

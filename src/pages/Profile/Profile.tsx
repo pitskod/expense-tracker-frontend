@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiClient, logout } from '../../utils/api';
+import { Logo } from '@/components';
 import styles from './Profile.module.css';
 
 type MeResponse = {
@@ -45,44 +46,48 @@ const Profile: React.FC = () => {
 
   return (
     <div className={styles.page}>
-      <div className={styles.panel}>
-        <div className={styles.topRow}>
-          <h1 className={styles.brand}>Expense Tracker</h1>
-          <div className={styles.actions}>
-            <Link to="/" className={styles.linkButton}>
-              Back to expenses
-            </Link>
-            <button onClick={handleSignOut} className={styles.button}>
-              Sign out
-            </button>
-          </div>
+      <header className={styles.header}>
+        <div className={styles.logoWrap} aria-label="YAET">
+          <Logo />
         </div>
+        <div className={styles.headerActions}>
+          <Link to="/" className={styles.headerButton}>
+            Back to expenses
+          </Link>
+          <button type="button" onClick={handleSignOut} className={styles.headerButton}>
+            Log out
+          </button>
+        </div>
+      </header>
 
+      <main className={styles.content}>
         <h2 className={styles.sectionTitle}>Your Profile</h2>
         <p className={styles.subtitle}>This page is protected and shows only your user details.</p>
 
-        {loading && <div>Loading...</div>}
+        {loading && <div className={styles.loading}>Loading...</div>}
         {error && <div className={styles.error}>{error}</div>}
 
         {!loading && !error && (
-          <table className={styles.table}>
-            <tbody>
-              <tr>
-                <th className={styles.th}>Name</th>
-                <td className={styles.td}>{me?.name || '-'}</td>
-              </tr>
-              <tr>
-                <th className={styles.th}>Email</th>
-                <td className={styles.td}>{me?.email || '-'}</td>
-              </tr>
-              <tr>
-                <th className={styles.th}>User ID</th>
-                <td className={styles.td}>{me?.id ?? '-'}</td>
-              </tr>
-            </tbody>
-          </table>
+          <div className={styles.card}>
+            <table className={styles.table}>
+              <tbody>
+                <tr>
+                  <th className={styles.th}>Name</th>
+                  <td className={styles.td}>{me?.name || '-'}</td>
+                </tr>
+                <tr>
+                  <th className={styles.th}>Email</th>
+                  <td className={styles.td}>{me?.email || '-'}</td>
+                </tr>
+                <tr>
+                  <th className={styles.th}>User ID</th>
+                  <td className={styles.td}>{me?.id ?? '-'}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         )}
-      </div>
+      </main>
     </div>
   );
 };

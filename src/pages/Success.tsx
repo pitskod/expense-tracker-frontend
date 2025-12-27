@@ -26,7 +26,11 @@ const Success: React.FC = () => {
             <AuthContent>
                 <div className="auth-header">
                     <div className="success-illustration">
-                        <span style={{ fontSize: '3rem', color: '#667eea' }}>✓</span>
+                        <img 
+                            src="/password_changed.svg" 
+                            alt="Password changed successfully"
+                            style={{ width: '100%', maxWidth: '327px', height: 'auto' }}
+                        />
                     </div>
                     <h1 className="auth-title">Change password successfully!</h1>
                     <p className="auth-subtitle">
