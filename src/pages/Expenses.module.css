@@ -130,15 +130,12 @@
 
 .th:nth-child(1),
 .td:nth-child(1) {
-  width: 40px;
-  text-align: center;
-  padding-left: 16px;
-  padding-right: 16px;
+  width: 30%;
 }
 
 .th:nth-child(2),
 .td:nth-child(2) {
-  width: 28%;
+  width: 20%;
 }
 
 .th:nth-child(3),
@@ -148,17 +145,12 @@
 
 .th:nth-child(4),
 .td:nth-child(4) {
-  width: 16%;
+  width: 22%;
 }
 
 .th:nth-child(5),
 .td:nth-child(5) {
-  width: 20%;
-}
-
-.th:nth-child(6),
-.td:nth-child(6) {
-  width: 12%;
+  width: 10%;
   text-align: center;
 }
 
@@ -175,13 +167,6 @@
 
 .row:hover {
   background: #fafafa;
-}
-
-.checkbox {
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
-  accent-color: #2f2cc8;
 }
 
 .nameCell {
@@ -220,6 +205,14 @@
 .emptyCell {
   padding: 0;
   border-bottom: none;
+}
+
+.loadingWrapper,
+.errorWrapper {
+  padding: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .emptyWrap {
@@ -479,6 +472,80 @@ input[type="date"] {
   }
 }
 
+/* Mobile Card Styles */
+.mobileCardList {
+  display: none;
+  background: white;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.expenseCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid #eef2f7;
+  background: white;
+}
+
+.expenseCard:last-child {
+  border-bottom: none;
+}
+
+.cardLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.cardIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #2f2cc8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.cardInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cardName {
+  font-weight: 700;
+  font-size: 16px;
+  color: #111827;
+}
+
+.cardCategory {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.cardRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.cardAmount {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ef4444;
+}
+
+.cardDate {
+  font-size: 14px;
+  color: #6b7280;
+}
+
 @media (max-width: 640px) {
   .header {
     padding: 0 14px;
@@ -493,6 +560,18 @@ input[type="date"] {
 
   .content {
     padding: 14px;
+  }
+
+  .tableCard {
+    padding: 0;
+  }
+
+  .table {
+    display: none;
+  }
+
+  .mobileCardList {
+    display: block;
   }
 
   .fab {

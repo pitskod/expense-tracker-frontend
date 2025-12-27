@@ -51,10 +51,10 @@ const Profile: React.FC = () => {
           <Logo />
         </div>
         <div className={styles.headerActions}>
-          <Link to="/" className={styles.headerButton}>
+          <Link to="/" className={styles.headerTextAction}>
             Back to expenses
           </Link>
-          <button type="button" onClick={handleSignOut} className={styles.headerButton}>
+          <button type="button" onClick={handleSignOut} className={styles.headerTextAction}>
             Log out
           </button>
         </div>
@@ -62,7 +62,6 @@ const Profile: React.FC = () => {
 
       <main className={styles.content}>
         <h2 className={styles.sectionTitle}>Your Profile</h2>
-        <p className={styles.subtitle}>This page is protected and shows only your user details.</p>
 
         {loading && <div className={styles.loading}>Loading...</div>}
         {error && <div className={styles.error}>{error}</div>}

@@ -44,6 +44,14 @@ function formatDate(date: string | null): string {
     return d.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+function formatCategory(category: string): string {
+    if (!category) return category;
+    return category
+        .split('_')
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+}
+
 function getCurrencySymbol(currency: string): string {
     switch (currency) {
         case 'USD':
@@ -237,110 +245,127 @@ const Expenses: React.FC = () => {
             <div className={styles.layout}>
                 <main className={styles.content}>
                     <div className={styles.tableCard}>
-                        <table className={styles.table}>
-                            <thead>
-                                <tr>
-                                    <th className={styles.th}></th>
-                                    <th className={styles.th}>Name</th>
-                                    <th className={styles.th}>Category</th>
-                                    <th className={styles.th}>Date</th>
-                                    <th className={styles.th}>Total</th>
-                                    <th className={styles.th}></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {loading ? (
-                                    <tr className={styles.row}>
-                                        <td className={styles.td} colSpan={6}>
-                                            <Loader />
-                                        </td>
-                                    </tr>
-                                ) : error ? (
-                                    <tr className={styles.row}>
-                                        <td className={styles.td} colSpan={6}>
-                                            <div className={styles.errorBanner}>{error}</div>
-                                        </td>
-                                    </tr>
-                                ) : rows.length === 0 ? (
-                                    <tr className={styles.row}>
-                                        <td className={`${styles.td} ${styles.emptyCell}`} colSpan={6}>
-                                            <div className={styles.emptyWrap}>
-                                                <div className={styles.emptyTitle}>The list of transactions are empty</div>
-                                                <p className={styles.emptySubtitle}>
-                                                    start to add a new one&nbsp; by clicking add button in the left bottom corner of your screen
-                                                </p>
-                                                <img
-                                                    className={styles.emptyImg}
-                                                    src="/no_transactions.svg"
-                                                    alt="No transactions"
-                                                />
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    rows.map((expense) => {
+                        {loading ? (
+                            <div className={styles.loadingWrapper}>
+                                <Loader />
+                            </div>
+                        ) : error ? (
+                            <div className={styles.errorWrapper}>
+                                <div className={styles.errorBanner}>{error}</div>
+                            </div>
+                        ) : rows.length === 0 ? (
+                            <div className={styles.emptyWrap}>
+                                <div className={styles.emptyTitle}>The list of transactions are empty</div>
+                                <p className={styles.emptySubtitle}>
+                                    start to add a new one&nbsp; by clicking add button in the left bottom corner of your screen
+                                </p>
+                                <img
+                                    className={styles.emptyImg}
+                                    src="/no_transactions.svg"
+                                    alt="No transactions"
+                                />
+                            </div>
+                        ) : (
+                            <>
+                                {/* Desktop Table View */}
+                                <table className={styles.table}>
+                                    <thead>
+                                        <tr>
+                                            <th className={styles.th}>Name</th>
+                                            <th className={styles.th}>Category</th>
+                                            <th className={styles.th}>Date</th>
+                                            <th className={styles.th}>Total</th>
+                                            <th className={styles.th}></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {rows.map((expense) => {
+                                            const iconCandidate = expense.category as Category;
+                                            const canRenderIcon = categoryOptions.includes(iconCandidate);
+                                            return (
+                                                <tr className={styles.row} key={expense.id}>
+                                                    <td className={styles.td}>
+                                                        <div className={styles.nameCell}>
+                                                            <span className={styles.iconBox} aria-hidden="true">
+                                                                {canRenderIcon ? <Icon icon={iconCandidate} size={18} color="white" /> : null}
+                                                            </span>
+                                                            <span className={styles.expenseName}>{expense.name}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className={styles.td}>
+                                                        <span className={styles.muted}>{formatCategory(expense.category)}</span>
+                                                    </td>
+                                                    <td className={styles.td}>
+                                                        <span className={styles.muted}>{formatDate(expense.date)}</span>
+                                                    </td>
+                                                    <td className={styles.td}>
+                                                        <span className={styles.totalAmount}>
+                                                            {formatAmount(expense.amount, expense.currency)}
+                                                        </span>
+                                                    </td>
+                                                    <td className={styles.td}>
+                                                        <div className={styles.actionMenuContainer}>
+                                                            <button
+                                                                type="button"
+                                                                className={styles.menuButton}
+                                                                onClick={() => setMenuOpenId(menuOpenId === expense.id ? null : expense.id)}
+                                                                aria-label="More options"
+                                                            >
+                                                                ⋯
+                                                            </button>
+                                                            {menuOpenId === expense.id && (
+                                                                <div className={styles.menuDropdown}>
+                                                                    <button
+                                                                        type="button"
+                                                                        className={styles.menuItem}
+                                                                        onClick={() => handleEditExpense(expense)}
+                                                                    >
+                                                                        Edit
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        className={styles.menuItem}
+                                                                        onClick={() => handleDeleteExpense(expense.id)}
+                                                                    >
+                                                                        Delete
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                                {/* Mobile Card View */}
+                                <div className={styles.mobileCardList}>
+                                    {rows.map((expense) => {
                                         const iconCandidate = expense.category as Category;
                                         const canRenderIcon = categoryOptions.includes(iconCandidate);
                                         return (
-                                            <tr className={styles.row} key={expense.id}>
-                                                <td className={styles.td}>
-                                                    <input type="checkbox" className={styles.checkbox} />
-                                                </td>
-                                                <td className={styles.td}>
-                                                    <div className={styles.nameCell}>
-                                                        <span className={styles.iconBox} aria-hidden="true">
-                                                            {canRenderIcon ? <Icon icon={iconCandidate} size={18} color="white" /> : null}
-                                                        </span>
-                                                        <span className={styles.expenseName}>{expense.name}</span>
-                                                    </div>
-                                                </td>
-                                                <td className={styles.td}>
-                                                    <span className={styles.muted}>{expense.category}</span>
-                                                </td>
-                                                <td className={styles.td}>
-                                                    <span className={styles.muted}>{formatDate(expense.date)}</span>
-                                                </td>
-                                                <td className={styles.td}>
-                                                    <span className={styles.totalAmount}>
-                                                        {formatAmount(expense.amount, expense.currency)}
+                                            <div className={styles.expenseCard} key={expense.id}>
+                                                <div className={styles.cardLeft}>
+                                                    <span className={styles.cardIcon} aria-hidden="true">
+                                                        {canRenderIcon ? <Icon icon={iconCandidate} size={24} color="white" /> : null}
                                                     </span>
-                                                </td>
-                                                <td className={styles.td}>
-                                                    <div className={styles.actionMenuContainer}>
-                                                        <button
-                                                            type="button"
-                                                            className={styles.menuButton}
-                                                            onClick={() => setMenuOpenId(menuOpenId === expense.id ? null : expense.id)}
-                                                            aria-label="More options"
-                                                        >
-                                                            ⋯
-                                                        </button>
-                                                        {menuOpenId === expense.id && (
-                                                            <div className={styles.menuDropdown}>
-                                                                <button
-                                                                    type="button"
-                                                                    className={styles.menuItem}
-                                                                    onClick={() => handleEditExpense(expense)}
-                                                                >
-                                                                    Edit
-                                                                </button>
-                                                                <button
-                                                                    type="button"
-                                                                    className={styles.menuItem}
-                                                                    onClick={() => handleDeleteExpense(expense.id)}
-                                                                >
-                                                                    Delete
-                                                                </button>
-                                                            </div>
-                                                        )}
+                                                    <div className={styles.cardInfo}>
+                                                        <div className={styles.cardName}>{expense.name}</div>
+                                                        <div className={styles.cardCategory}>{formatCategory(expense.category)}</div>
                                                     </div>
-                                                </td>
-                                            </tr>
+                                                </div>
+                                                <div className={styles.cardRight}>
+                                                    <div className={styles.cardAmount}>
+                                                        {formatAmount(expense.amount, expense.currency)}
+                                                    </div>
+                                                    <div className={styles.cardDate}>{formatDate(expense.date)}</div>
+                                                </div>
+                                            </div>
                                         );
-                                    })
-                                )}
-                            </tbody>
-                        </table>
+                                    })}
+                                </div>
+                            </>
+                        )}
                     </div>
                 </main>
 
