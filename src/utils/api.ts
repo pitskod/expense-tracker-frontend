@@ -53,9 +53,6 @@ function extractErrorMessage(err: unknown): string {
 export const apiClient: AxiosInstance = axios.create({
   baseURL: API_URL,
   withCredentials: true, // send/receive refresh_token cookie
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
 // A raw client without interceptors (used for token refresh to avoid recursion)
@@ -72,6 +69,17 @@ apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (accessToken) {
     config.headers = config.headers || {};
     config.headers.Authorization = `Bearer ${accessToken}`;
+  }
+  // Set Content-Type to application/json only if not FormData
+  // FormData needs to let browser set Content-Type with boundary
+  if (!(config.data instanceof FormData)) {
+    config.headers = config.headers || {};
+    config.headers['Content-Type'] = 'application/json';
+  } else {
+    // Remove Content-Type for FormData to let browser set it with boundary
+    if (config.headers) {
+      delete config.headers['Content-Type'];
+    }
   }
   return config;
 });

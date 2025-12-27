@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiClient, logout } from '../utils/api';
-import { Button, DatePicker, Icon, Input, InputLabel, Loader, Logo } from '@/components';
+import { Button, DatePicker, Icon, Input, InputLabel, Loader, Logo, UploadInvoiceModal, type InvoiceUploadData } from '@/components';
 import type { Category } from '@/types';
 import styles from './Expenses.module.css';
 
@@ -12,6 +12,7 @@ type Expense = {
     currency: string;
     category: string;
     date: string | null;
+    display_order?: number | null;
 };
 
 type CreateExpensePayload = {
@@ -35,7 +36,7 @@ const categoryOptions: Category[] = [
     'debt',
 ];
 
-const currencyOptions = ['USD', 'EUR', 'GBP'] as const;
+const currencyOptions = ['USD', 'EUR', 'PLN'] as const;
 
 function formatDate(date: string | null): string {
     if (!date) return '-';
@@ -58,8 +59,8 @@ function getCurrencySymbol(currency: string): string {
             return '$';
         case 'EUR':
             return '€';
-        case 'GBP':
-            return '£';
+        case 'PLN':
+            return 'zł';
         default:
             return currency;
     }
@@ -87,6 +88,9 @@ const Expenses: React.FC = () => {
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [editingExpenseId, setEditingExpenseId] = useState<number | null>(null);
     const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
+    const [uploadModalOpen, setUploadModalOpen] = useState(false);
+    const [draggedExpenseId, setDraggedExpenseId] = useState<number | null>(null);
+    const [dragOverExpenseId, setDragOverExpenseId] = useState<number | null>(null);
 
     // Create form state
     const [createName, setCreateName] = useState('');
@@ -185,6 +189,83 @@ const Expenses: React.FC = () => {
         }
     };
 
+    const handleDragStart = (e: React.DragEvent, expenseId: number) => {
+        setDraggedExpenseId(expenseId);
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/html', ''); // Required for Firefox
+    };
+
+    const handleDragOver = (e: React.DragEvent, expenseId: number) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (draggedExpenseId !== expenseId) {
+            setDragOverExpenseId(expenseId);
+        }
+    };
+
+    const handleDragLeave = () => {
+        setDragOverExpenseId(null);
+    };
+
+    const handleDrop = async (e: React.DragEvent, targetExpenseId: number) => {
+        e.preventDefault();
+        setDragOverExpenseId(null);
+        
+        if (!draggedExpenseId || draggedExpenseId === targetExpenseId) {
+            setDraggedExpenseId(null);
+            return;
+        }
+
+        // Calculate new order
+        const draggedIndex = expenses.findIndex((exp) => exp.id === draggedExpenseId);
+        const targetIndex = expenses.findIndex((exp) => exp.id === targetExpenseId);
+        
+        if (draggedIndex === -1 || targetIndex === -1) {
+            setDraggedExpenseId(null);
+            return;
+        }
+
+        // Reorder expenses locally
+        const newExpenses = [...expenses];
+        const [draggedExpense] = newExpenses.splice(draggedIndex, 1);
+        newExpenses.splice(targetIndex, 0, draggedExpense);
+        
+        // Optimistically update UI
+        setExpenses(newExpenses);
+        setDraggedExpenseId(null);
+
+        // Persist to backend
+        try {
+            const expenseIds = newExpenses.map((exp) => exp.id);
+            await apiClient.patch('/api/expenses/reorder', { expense_ids: expenseIds });
+        } catch (err) {
+            // Revert on error
+            setExpenses(expenses);
+            alert(err instanceof Error ? err.message : 'Failed to reorder expenses');
+        }
+    };
+
+    const handleDragEnd = () => {
+        setDraggedExpenseId(null);
+        setDragOverExpenseId(null);
+    };
+
+    const handleInvoiceUploadSuccess = (data: InvoiceUploadData) => {
+        // Reset form first to clear any existing data
+        resetCreateForm();
+        // Pre-fill the form with extracted data
+        setCreateName(data.name);
+        setCreateAmount(String(data.amount));
+        if (data.currency && currencyOptions.includes(data.currency)) {
+            setCreateCurrency(data.currency as typeof currencyOptions[number]);
+        }
+        // Date is already in YYYY-MM-DD format which matches the date input format
+        setCreateDate(data.date);
+        setCreateError(null);
+        // Open the drawer to show the pre-filled form
+        setDrawerOpen(true);
+    };
+
     const handleCreateExpense = async (e: React.FormEvent) => {
         e.preventDefault();
         setCreateError(null);
@@ -213,8 +294,8 @@ const Expenses: React.FC = () => {
                 setExpenses((prev) => prev.map((exp) => (exp.id === editingExpenseId ? (res.data as Expense) : exp)));
             } else {
                 // Create new expense
-                const res = await apiClient.post('/api/expenses', payload);
-                setExpenses((prev) => [res.data as Expense, ...prev]);
+            const res = await apiClient.post('/api/expenses', payload);
+            setExpenses((prev) => [res.data as Expense, ...prev]);
             }
             resetCreateForm();
             // keep open on desktop; close on mobile
@@ -245,26 +326,26 @@ const Expenses: React.FC = () => {
             <div className={styles.layout}>
                 <main className={styles.content}>
                     <div className={styles.tableCard}>
-                        {loading ? (
+                                {loading ? (
                             <div className={styles.loadingWrapper}>
-                                <Loader />
+                                            <Loader />
                             </div>
-                        ) : error ? (
+                                ) : error ? (
                             <div className={styles.errorWrapper}>
-                                <div className={styles.errorBanner}>{error}</div>
+                                            <div className={styles.errorBanner}>{error}</div>
                             </div>
-                        ) : rows.length === 0 ? (
-                            <div className={styles.emptyWrap}>
-                                <div className={styles.emptyTitle}>The list of transactions are empty</div>
-                                <p className={styles.emptySubtitle}>
-                                    start to add a new one&nbsp; by clicking add button in the left bottom corner of your screen
-                                </p>
-                                <img
-                                    className={styles.emptyImg}
-                                    src="/no_transactions.svg"
-                                    alt="No transactions"
-                                />
-                            </div>
+                                ) : rows.length === 0 ? (
+                                            <div className={styles.emptyWrap}>
+                                                <div className={styles.emptyTitle}>The list of transactions are empty</div>
+                                                <p className={styles.emptySubtitle}>
+                                                    start to add a new one&nbsp; by clicking add button in the left bottom corner of your screen
+                                                </p>
+                                                <img
+                                                    className={styles.emptyImg}
+                                                    src="/no_transactions.svg"
+                                                    alt="No transactions"
+                                                />
+                                            </div>
                         ) : (
                             <>
                                 {/* Desktop Table View */}
@@ -276,29 +357,40 @@ const Expenses: React.FC = () => {
                                             <th className={styles.th}>Date</th>
                                             <th className={styles.th}>Total</th>
                                             <th className={styles.th}></th>
-                                        </tr>
+                                    </tr>
                                     </thead>
                                     <tbody>
                                         {rows.map((expense) => {
-                                            const iconCandidate = expense.category as Category;
-                                            const canRenderIcon = categoryOptions.includes(iconCandidate);
-                                            return (
-                                                <tr className={styles.row} key={expense.id}>
-                                                    <td className={styles.td}>
-                                                        <div className={styles.nameCell}>
-                                                            <span className={styles.iconBox} aria-hidden="true">
-                                                                {canRenderIcon ? <Icon icon={iconCandidate} size={18} color="white" /> : null}
-                                                            </span>
-                                                            <span className={styles.expenseName}>{expense.name}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td className={styles.td}>
+                                        const iconCandidate = expense.category as Category;
+                                        const canRenderIcon = categoryOptions.includes(iconCandidate);
+                                        const isDragging = draggedExpenseId === expense.id;
+                                        const isDragOver = dragOverExpenseId === expense.id;
+                                        return (
+                                            <tr 
+                                                className={`${styles.row} ${isDragging ? styles.dragging : ''} ${isDragOver ? styles.dragOver : ''}`}
+                                                key={expense.id}
+                                                draggable
+                                                onDragStart={(e) => handleDragStart(e, expense.id)}
+                                                onDragOver={(e) => handleDragOver(e, expense.id)}
+                                                onDragLeave={handleDragLeave}
+                                                onDrop={(e) => handleDrop(e, expense.id)}
+                                                onDragEnd={handleDragEnd}
+                                            >
+                                                <td className={styles.td}>
+                                                    <div className={styles.nameCell}>
+                                                        <span className={styles.iconBox} aria-hidden="true">
+                                                            {canRenderIcon ? <Icon icon={iconCandidate} size={18} color="white" /> : null}
+                                                        </span>
+                                                        <span className={styles.expenseName}>{expense.name}</span>
+                                                    </div>
+                                                </td>
+                                                <td className={styles.td}>
                                                         <span className={styles.muted}>{formatCategory(expense.category)}</span>
-                                                    </td>
-                                                    <td className={styles.td}>
-                                                        <span className={styles.muted}>{formatDate(expense.date)}</span>
-                                                    </td>
-                                                    <td className={styles.td}>
+                                                </td>
+                                                <td className={styles.td}>
+                                                    <span className={styles.muted}>{formatDate(expense.date)}</span>
+                                                </td>
+                                                <td className={styles.td}>
                                                         <span className={styles.totalAmount}>
                                                             {formatAmount(expense.amount, expense.currency)}
                                                         </span>
@@ -343,8 +435,19 @@ const Expenses: React.FC = () => {
                                     {rows.map((expense) => {
                                         const iconCandidate = expense.category as Category;
                                         const canRenderIcon = categoryOptions.includes(iconCandidate);
+                                        const isDragging = draggedExpenseId === expense.id;
+                                        const isDragOver = dragOverExpenseId === expense.id;
                                         return (
-                                            <div className={styles.expenseCard} key={expense.id}>
+                                            <div 
+                                                className={`${styles.expenseCard} ${isDragging ? styles.dragging : ''} ${isDragOver ? styles.dragOver : ''}`}
+                                                key={expense.id}
+                                                draggable
+                                                onDragStart={(e) => handleDragStart(e, expense.id)}
+                                                onDragOver={(e) => handleDragOver(e, expense.id)}
+                                                onDragLeave={handleDragLeave}
+                                                onDrop={(e) => handleDrop(e, expense.id)}
+                                                onDragEnd={handleDragEnd}
+                                            >
                                                 <div className={styles.cardLeft}>
                                                     <span className={styles.cardIcon} aria-hidden="true">
                                                         {canRenderIcon ? <Icon icon={iconCandidate} size={24} color="white" /> : null}
@@ -383,7 +486,16 @@ const Expenses: React.FC = () => {
 
                 {drawerOpen && (
                     <aside className={styles.drawer} aria-label={editingExpenseId ? "Edit expense drawer" : "Create expense drawer"}>
-                        <div className={styles.drawerTitle}>{editingExpenseId ? 'Edit expense' : 'Create expense'}</div>
+                        <div className={styles.drawerHeader}>
+                            <div className={styles.drawerTitle}>{editingExpenseId ? 'Edit expense' : 'Create expense'}</div>
+                            <button
+                                type="button"
+                                className={styles.uploadInvoiceButton}
+                                onClick={() => setUploadModalOpen(true)}
+                            >
+                                Upload Invoice
+                            </button>
+                        </div>
                         <form className={styles.drawerForm} onSubmit={handleCreateExpense}>
                             {createError && <div className={styles.errorBanner}>{createError}</div>}
 
@@ -459,6 +571,12 @@ const Expenses: React.FC = () => {
                         </form>
                     </aside>
                 )}
+
+                <UploadInvoiceModal
+                    isOpen={uploadModalOpen}
+                    onClose={() => setUploadModalOpen(false)}
+                    onUploadSuccess={handleInvoiceUploadSuccess}
+                />
             </div>
         </div>
     );

@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -5,9 +6,16 @@ from fastapi.openapi.utils import get_openapi
 from routers.expenses import router as expenses_router
 from routers.users import router as users_router
 from routers.auth import router as auth_router
+from routers.invoices import router as invoices_router
 from utils.db import create_db_and_tables
 from utils.middleware import AuthMiddleware
 from utils.scheduler import start_scheduler, stop_scheduler
+
+# Configure logging to show INFO level messages
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 
 @asynccontextmanager
@@ -42,13 +50,14 @@ app.add_middleware(
 # Note: tuples with a single item require a trailing comma.
 app.add_middleware(
     AuthMiddleware,
-    protected_prefixes=("/api/users", "/api/expenses"),
+    protected_prefixes=("/api/users", "/api/expenses", "/api/invoices"),
     exclude_prefixes=("/api/auth", "/docs", "/openapi.json", "/redoc"),
 )
 
 app.include_router(expenses_router, prefix="/api/expenses", tags=["expenses"])
 app.include_router(users_router, prefix="/api/users", tags=["users"])
 app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
+app.include_router(invoices_router, prefix="/api/invoices", tags=["invoices"])
 
 
 # Customize OpenAPI to include Bearer auth so Swagger UI shows the Authorize button

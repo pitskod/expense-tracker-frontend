@@ -7,4 +7,6 @@ export { InputLabel } from './InputLabel';
 export { Icon } from './Icon';
 export { DatePicker } from './DatePicker';
 export { AuthDesktopBackground } from './AuthDesktopBackground';
+export { UploadInvoiceModal } from './UploadInvoiceModal';
+export type { InvoiceUploadData } from './UploadInvoiceModal';
 export { AuthContent } from './AuthContent';
