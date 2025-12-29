@@ -20,21 +20,17 @@ interface UploadInvoiceModalProps {
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 
-// Pure function - moved outside component to prevent recreation
 const validateFile = (fileToValidate: File): string | null => {
-  // Check file type
   const validTypes = ['image/jpeg', 'image/jpg'];
   if (!validTypes.includes(fileToValidate.type)) {
     return 'Only JPG files are allowed';
   }
 
-  // Check file extension
   const fileName = fileToValidate.name.toLowerCase();
   if (!fileName.endsWith('.jpg') && !fileName.endsWith('.jpeg')) {
     return 'Only .jpg or .jpeg files are allowed';
   }
 
-  // Check file size
   if (fileToValidate.size > MAX_FILE_SIZE) {
     const sizeMB = (fileToValidate.size / (1024 * 1024)).toFixed(2);
     return `File size exceeds 5 MB. Current size: ${sizeMB} MB`;
@@ -118,7 +114,6 @@ export const UploadInvoiceModal = memo<UploadInvoiceModalProps>(({
       const formData = new FormData();
       formData.append('file', file);
 
-      // Don't set Content-Type header - let browser set it with boundary for multipart/form-data
       const response = await apiClient.post<InvoiceUploadData>('/api/invoices/analyze', formData);
       
       onUploadSuccess(response.data);

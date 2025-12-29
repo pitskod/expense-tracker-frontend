@@ -13,17 +13,14 @@ import {
 } from '../pages';
 import { ensureAuth, getAccessToken } from '../utils/api';
 
-// Define all application routes
 const router = createBrowserRouter([
     {
         path: '/',
         element: <Expenses />,
         loader: async () => {
-            // If we already have a token, we're good
             if (getAccessToken()) {
                 return null;
             }
-            // Otherwise, try to refresh from cookie
             try {
                 await ensureAuth();
                 return null;
@@ -74,7 +71,6 @@ const router = createBrowserRouter([
     },
 ]);
 
-// Router component that provides routing context
 const AppRouter: React.FC = () => {
     return <RouterProvider router={router} />;
 };

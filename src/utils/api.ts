@@ -1,9 +1,6 @@
 import axios from 'axios';
 import type { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 
-// API configuration
-// Always prefer localhost for the browser runtime.
-// If something sets VITE_API_URL to host.docker.internal (Docker-only), rewrite it to localhost.
 const rawEnvUrl = import.meta.env.VITE_API_URL as string | undefined;
 const API_URL =
   (rawEnvUrl ? rawEnvUrl.replace(/host\.docker\.internal/gi, 'localhost') : undefined) ||
@@ -11,7 +8,6 @@ const API_URL =
 
 type TokenResponse = { access_token: string; token_type: string };
 
-// Access token is stored ONLY in this module closure (no localStorage/sessionStorage).
 let accessToken: string | null = null;
 let refreshInFlight: Promise<string> | null = null;
 
@@ -27,16 +23,10 @@ export function clearAccessToken() {
   accessToken = null;
 }
 
-/**
- * Logs out the current device session.
- * - Calls backend `/api/auth/logout` to invalidate refresh token and clear cookie
- * - Always clears in-memory access token (even if backend call fails)
- */
 export async function logout(): Promise<void> {
   try {
     await rawClient.get('/api/auth/logout');
   } catch {
-    // Intentionally swallow: user intent is to sign out locally even if server/cookie is already gone.
   } finally {
     clearAccessToken();
   }
@@ -52,10 +42,9 @@ function extractErrorMessage(err: unknown): string {
 
 export const apiClient: AxiosInstance = axios.create({
   baseURL: API_URL,
-  withCredentials: true, // send/receive refresh_token cookie
+  withCredentials: true,
 });
 
-// A raw client without interceptors (used for token refresh to avoid recursion)
 const rawClient: AxiosInstance = axios.create({
   baseURL: API_URL,
   withCredentials: true,
@@ -64,19 +53,15 @@ const rawClient: AxiosInstance = axios.create({
   },
 });
 
-// Attach Authorization header from closure-stored access token
 apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (accessToken) {
     config.headers = config.headers || {};
     config.headers.Authorization = `Bearer ${accessToken}`;
   }
-  // Set Content-Type to application/json only if not FormData
-  // FormData needs to let browser set Content-Type with boundary
   if (!(config.data instanceof FormData)) {
     config.headers = config.headers || {};
     config.headers['Content-Type'] = 'application/json';
   } else {
-    // Remove Content-Type for FormData to let browser set it with boundary
     if (config.headers) {
       delete config.headers['Content-Type'];
     }
@@ -100,24 +85,20 @@ async function refreshAccessToken(): Promise<string> {
   return refreshInFlight;
 }
 
-// Ensure there is an access token in closure (by refreshing from cookie if needed)
 export async function ensureAuth(): Promise<void> {
   if (accessToken) return;
   await refreshAccessToken();
 }
 
-// Auto-refresh on 401 and retry once
 apiClient.interceptors.response.use(
   (res) => res,
   async (error: AxiosError) => {
     const originalRequest: any = error.config;
 
-    // Network / CORS / server down
     if (!error.response) {
       throw new Error(`Unable to connect to the server. Please ensure the backend is running at ${API_URL}`);
     }
 
-    // Don't attempt to refresh if the token endpoint itself is failing
     if (originalRequest?.url?.includes('/api/auth/token')) {
       clearAccessToken();
       throw new Error(extractErrorMessage(error));

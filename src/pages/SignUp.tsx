@@ -13,7 +13,6 @@ interface SignUpFormData {
   password: string;
 }
 
-// Validation schema matching backend requirements
 const signUpSchema = yup.object({
   name: yup
     .string()
@@ -47,24 +46,21 @@ const SignUp: React.FC = () => {
     formState: { errors },
   } = useForm<SignUpFormData>({
     resolver: yupResolver(signUpSchema),
-    mode: 'onSubmit', // Only validate on submit
+    mode: 'onSubmit',
   });
 
-  // Handle form submission
   const onSubmit = async (data: SignUpFormData) => {
     setIsSubmitting(true);
     setSubmitError(null);
     setSuccessMessage(null);
 
     try {
-      // Send sign-up request to backend endpoint
       await apiClient.post('/api/auth/sign-up', {
         name: data.name,
         email: data.email,
         password: data.password,
       });
       
-      // Redirect to sign-in page after 2 seconds
       setTimeout(() => {
         navigate('/sign-in');
       }, 2000);

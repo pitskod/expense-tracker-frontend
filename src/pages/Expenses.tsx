@@ -38,7 +38,6 @@ const categoryOptions: Category[] = [
 
 const currencyOptions = ['USD', 'EUR', 'PLN'] as const;
 
-// Pure functions - moved outside component to prevent recreation on every render
 function formatDate(date: string | null): string {
     if (!date) return '-';
     const d = new Date(date);
@@ -93,12 +92,11 @@ const Expenses: React.FC = () => {
     const [draggedExpenseId, setDraggedExpenseId] = useState<number | null>(null);
     const [dragOverExpenseId, setDragOverExpenseId] = useState<number | null>(null);
 
-    // Create form state
     const [createName, setCreateName] = useState('');
     const [createAmount, setCreateAmount] = useState('');
     const [createCurrency, setCreateCurrency] = useState<(typeof currencyOptions)[number]>('USD');
     const [createCategory, setCreateCategory] = useState<Category>('hobby');
-    const [createDate, setCreateDate] = useState(getTodayDateString()); // yyyy-mm-dd (from native date input)
+    const [createDate, setCreateDate] = useState(getTodayDateString());
     const [creating, setCreating] = useState(false);
     const [createError, setCreateError] = useState<string | null>(null);
 
@@ -207,7 +205,7 @@ const Expenses: React.FC = () => {
     const handleDragStart = useCallback((e: React.DragEvent, expenseId: number) => {
         setDraggedExpenseId(expenseId);
         e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/html', ''); // Required for Firefox
+        e.dataTransfer.setData('text/html', '');
     }, []);
 
     const handleDragOver = useCallback((e: React.DragEvent, expenseId: number) => {
@@ -231,7 +229,6 @@ const Expenses: React.FC = () => {
             return;
         }
 
-        // Calculate new order
         const draggedIndex = expenses.findIndex((exp) => exp.id === draggedExpenseId);
         const targetIndex = expenses.findIndex((exp) => exp.id === targetExpenseId);
         
@@ -240,21 +237,17 @@ const Expenses: React.FC = () => {
             return;
         }
 
-        // Reorder expenses locally
         const newExpenses = [...expenses];
         const [draggedExpense] = newExpenses.splice(draggedIndex, 1);
         newExpenses.splice(targetIndex, 0, draggedExpense);
         
-        // Optimistically update UI
         setExpenses(newExpenses);
         setDraggedExpenseId(null);
 
-        // Persist to backend
         try {
             const expenseIds = newExpenses.map((exp) => exp.id);
             await apiClient.patch('/api/expenses/reorder', { expense_ids: expenseIds });
         } catch (err) {
-            // Revert on error
             setExpenses(expenses);
             alert(err instanceof Error ? err.message : 'Failed to reorder expenses');
         }
@@ -266,18 +259,14 @@ const Expenses: React.FC = () => {
     }, []);
 
     const handleInvoiceUploadSuccess = useCallback((data: InvoiceUploadData) => {
-        // Reset form first to clear any existing data
         resetCreateForm();
-        // Pre-fill the form with extracted data
         setCreateName(data.name);
         setCreateAmount(String(data.amount));
         if (data.currency && currencyOptions.includes(data.currency)) {
             setCreateCurrency(data.currency as typeof currencyOptions[number]);
         }
-        // Date is already in YYYY-MM-DD format which matches the date input format
         setCreateDate(data.date);
         setCreateError(null);
-        // Open the drawer to show the pre-filled form
         setDrawerOpen(true);
     }, [resetCreateForm]);
 
@@ -304,16 +293,13 @@ const Expenses: React.FC = () => {
         try {
             setCreating(true);
             if (editingExpenseId) {
-                // Update existing expense
                 const res = await apiClient.patch(`/api/expenses/${editingExpenseId}`, payload);
                 setExpenses((prev) => prev.map((exp) => (exp.id === editingExpenseId ? (res.data as Expense) : exp)));
             } else {
-                // Create new expense
-            const res = await apiClient.post('/api/expenses', payload);
-            setExpenses((prev) => [res.data as Expense, ...prev]);
+                const res = await apiClient.post('/api/expenses', payload);
+                setExpenses((prev) => [res.data as Expense, ...prev]);
             }
             resetCreateForm();
-            // keep open on desktop; close on mobile
             if (!window.matchMedia('(min-width: 1100px)').matches) setDrawerOpen(false);
         } catch (err) {
             setCreateError(err instanceof Error ? err.message : editingExpenseId ? 'Failed to update expense' : 'Failed to create expense');

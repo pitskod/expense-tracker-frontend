@@ -11,15 +11,13 @@ if (process.env.NODE_ENV === 'development') {
       logOwnerReasons: true,
       collapseGroups: true,
       trackExtraHooks: [
-        // Track React Router hooks
         [require('react-router-dom'), 'useNavigate'],
         [require('react-router-dom'), 'useLocation'],
-        // Track React Hook Form hooks
         [require('react-hook-form'), 'useForm'],
         [require('react-hook-form'), 'Controller'],
       ],
       include: [
-        /.*/, // Track all components
+        /.*/,
       ],
       exclude: [
         /^BrowserRouter/,
@@ -31,7 +29,7 @@ if (process.env.NODE_ENV === 'development') {
     });
     console.log('✅ why-did-you-render initialized');
   } catch (error) {
-    console.warn('⚠️ why-did-you-render not available. Install it with: npm install --save-dev @welldone-software/why-did-you-render');
+    // why-did-you-render not available or incompatible with React 19
   }
 }
 

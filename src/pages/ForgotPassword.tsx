@@ -25,7 +25,6 @@ const ForgotPassword: React.FC = () => {
                 { email }
             );
 
-            // Move user to the next step in the flow
             navigate('/verification-code', { state: { email } });
         } catch (e) {
             setSubmitError(e instanceof Error ? e.message : 'Failed to send reset code.');

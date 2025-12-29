@@ -1,6 +1,3 @@
-/**
- * Performance benchmarking utilities
- */
 import React from 'react';
 
 export interface PerformanceMetrics {
@@ -13,9 +10,6 @@ class PerformanceMonitor {
   private metrics: Map<string, PerformanceMetrics> = new Map();
   private renderTimes: Map<string, number[]> = new Map();
 
-  /**
-   * Track component render
-   */
   trackRender(componentName: string, renderTime: number): void {
     const existing = this.metrics.get(componentName) || {
       renderCount: 0,
@@ -38,23 +32,14 @@ class PerformanceMonitor {
     });
   }
 
-  /**
-   * Get metrics for a component
-   */
   getMetrics(componentName: string): PerformanceMetrics | undefined {
     return this.metrics.get(componentName);
   }
 
-  /**
-   * Get all metrics
-   */
   getAllMetrics(): Map<string, PerformanceMetrics> {
     return new Map(this.metrics);
   }
 
-  /**
-   * Reset metrics for a component
-   */
   reset(componentName?: string): void {
     if (componentName) {
       this.metrics.delete(componentName);
@@ -65,9 +50,6 @@ class PerformanceMonitor {
     }
   }
 
-  /**
-   * Log performance report
-   */
   logReport(): void {
     if (this.metrics.size === 0) {
       console.log('No performance metrics recorded');
@@ -90,12 +72,8 @@ class PerformanceMonitor {
   }
 }
 
-// Singleton instance
 export const performanceMonitor = new PerformanceMonitor();
 
-/**
- * Higher-order component to track render performance
- */
 export function withPerformanceTracking<T extends object>(
   Component: React.ComponentType<T>,
   componentName?: string
@@ -115,9 +93,6 @@ export function withPerformanceTracking<T extends object>(
   };
 }
 
-/**
- * Hook to measure render time
- */
 export function useRenderTime(componentName: string): void {
   const startTime = React.useRef(performance.now());
 
@@ -129,7 +104,6 @@ export function useRenderTime(componentName: string): void {
   });
 }
 
-// Make it available in development
 if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
   (window as any).__performanceMonitor = performanceMonitor;
 }

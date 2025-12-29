@@ -26,10 +26,7 @@ const SignIn: React.FC = () => {
                 { email, password }
             );
 
-            // Store access token ONLY in closure (no storage)
             setAccessToken(res.data.access_token);
-
-            // Navigate using replace to avoid back button issues
             navigate('/', { replace: true });
         } catch (e) {
             setSubmitError(e instanceof Error ? e.message : 'Sign in failed. Please try again.');
