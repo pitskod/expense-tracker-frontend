@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo, useCallback, useMemo } from 'react';
 import styles from './index.module.css';
 
 export interface PasswordInputProps {
@@ -12,7 +12,7 @@ export interface PasswordInputProps {
   value?: string;
 }
 
-export const PasswordInput: React.FC<PasswordInputProps> = ({
+export const PasswordInput = memo(({
   placeholder,
   onChange,
   onBlur,
@@ -21,12 +21,20 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
   disabled,
   defaultValue,
   value
-}) => {
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+}: PasswordInputProps) => {
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     onChange?.(e.target.value);
-  };
+  }, [onChange]);
 
-  const hasValue = (value !== undefined && value !== '') || (defaultValue !== undefined && defaultValue !== '');
+  const hasValue = useMemo(() => 
+    (value !== undefined && value !== '') || (defaultValue !== undefined && defaultValue !== ''),
+    [value, defaultValue]
+  );
+
+  const className = useMemo(() => 
+    `${styles.input} ${error ? styles.inputError : ''} ${hasValue ? styles.inputHasValue : ''}`,
+    [error, hasValue]
+  );
 
   return (
     <div className={styles.inputGroup}>
@@ -36,7 +44,7 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
         onChange={handleChange}
         onBlur={onBlur}
         disabled={disabled}
-        className={`${styles.input} ${error ? styles.inputError : ''} ${hasValue ? styles.inputHasValue : ''}`}
+        className={className}
         defaultValue={defaultValue}
         value={value}
       />
@@ -47,6 +55,8 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
       )}
     </div>
   );
-};
+});
+
+PasswordInput.displayName = 'PasswordInput';
 
 export default PasswordInput;

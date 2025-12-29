@@ -1,3 +1,4 @@
+import React, { memo, useCallback, useMemo } from 'react';
 import styles from './index.module.css';
 
 export interface InputProps {
@@ -12,7 +13,7 @@ export interface InputProps {
   disabled?: boolean;
 }
 
-export const Input = ({
+export const Input = memo(({
   defaultValue,
   value,
   placeholder,
@@ -23,11 +24,19 @@ export const Input = ({
   onBlur,
   disabled
 }: InputProps) => {
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     onChange?.(e.target.value);
-  };
+  }, [onChange]);
 
-  const hasValue = (value !== undefined && value !== '') || (defaultValue !== undefined && defaultValue !== '');
+  const hasValue = useMemo(() => 
+    (value !== undefined && value !== '') || (defaultValue !== undefined && defaultValue !== ''),
+    [value, defaultValue]
+  );
+
+  const className = useMemo(() => 
+    `${styles.input} ${error ? styles.inputError : ''} ${hasValue ? styles.inputHasValue : ''}`,
+    [error, hasValue]
+  );
 
   return (
     <div className={styles.inputGroup}>
@@ -39,7 +48,7 @@ export const Input = ({
         onChange={handleChange}
         onBlur={onBlur}
         disabled={disabled}
-        className={`${styles.input} ${error ? styles.inputError : ''} ${hasValue ? styles.inputHasValue : ''}`}
+        className={className}
       />
       {helperText && (
         <div className={error ? styles.error : styles.helperText}>
@@ -48,4 +57,6 @@ export const Input = ({
       )}
     </div>
   );
-};
+});
+
+Input.displayName = 'Input';

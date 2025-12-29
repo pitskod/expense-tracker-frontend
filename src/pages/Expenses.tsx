@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiClient, logout } from '../utils/api';
 import { Button, DatePicker, Icon, Input, InputLabel, Loader, Logo, UploadInvoiceModal, type InvoiceUploadData } from '@/components';
@@ -38,6 +38,7 @@ const categoryOptions: Category[] = [
 
 const currencyOptions = ['USD', 'EUR', 'PLN'] as const;
 
+// Pure functions - moved outside component to prevent recreation on every render
 function formatDate(date: string | null): string {
     if (!date) return '-';
     const d = new Date(date);
@@ -141,12 +142,7 @@ const Expenses: React.FC = () => {
 
     const rows = useMemo(() => expenses, [expenses]);
 
-    const handleSignOut = async () => {
-        await logout();
-        navigate('/sign-in');
-    };
-
-    const resetCreateForm = () => {
+    const resetCreateForm = useCallback(() => {
         setCreateName('');
         setCreateAmount('');
         setCreateCurrency('USD');
@@ -154,9 +150,28 @@ const Expenses: React.FC = () => {
         setCreateDate(getTodayDateString());
         setCreateError(null);
         setEditingExpenseId(null);
-    };
+    }, []);
 
-    const formatDateForInput = (date: string | null): string => {
+    const handleSignOut = useCallback(async () => {
+        await logout();
+        navigate('/sign-in');
+    }, [navigate]);
+
+    const handleToggleMenu = useCallback((expenseId: number) => {
+        setMenuOpenId((prev) => prev === expenseId ? null : expenseId);
+    }, []);
+
+    const handleDrawerOpen = useCallback(() => {
+        resetCreateForm();
+        setDrawerOpen(true);
+    }, [resetCreateForm]);
+
+    const handleDrawerClose = useCallback(() => {
+        setDrawerOpen(false);
+        resetCreateForm();
+    }, [resetCreateForm]);
+
+    const formatDateForInput = useCallback((date: string | null): string => {
         if (!date) return getTodayDateString();
         const d = new Date(date);
         if (Number.isNaN(d.getTime())) return getTodayDateString();
@@ -164,9 +179,9 @@ const Expenses: React.FC = () => {
         const month = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
-    };
+    }, []);
 
-    const handleEditExpense = (expense: Expense) => {
+    const handleEditExpense = useCallback((expense: Expense) => {
         setCreateName(expense.name);
         setCreateAmount(String(expense.amount));
         setCreateCurrency(expense.currency as (typeof currencyOptions)[number]);
@@ -175,9 +190,9 @@ const Expenses: React.FC = () => {
         setEditingExpenseId(expense.id);
         setMenuOpenId(null);
         setDrawerOpen(true);
-    };
+    }, [formatDateForInput]);
 
-    const handleDeleteExpense = async (id: number) => {
+    const handleDeleteExpense = useCallback(async (id: number) => {
         if (!confirm('Are you sure you want to delete this expense?')) return;
         
         try {
@@ -187,27 +202,27 @@ const Expenses: React.FC = () => {
         } catch (err) {
             alert(err instanceof Error ? err.message : 'Failed to delete expense');
         }
-    };
+    }, []);
 
-    const handleDragStart = (e: React.DragEvent, expenseId: number) => {
+    const handleDragStart = useCallback((e: React.DragEvent, expenseId: number) => {
         setDraggedExpenseId(expenseId);
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/html', ''); // Required for Firefox
-    };
+    }, []);
 
-    const handleDragOver = (e: React.DragEvent, expenseId: number) => {
+    const handleDragOver = useCallback((e: React.DragEvent, expenseId: number) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
         if (draggedExpenseId !== expenseId) {
             setDragOverExpenseId(expenseId);
         }
-    };
+    }, [draggedExpenseId]);
 
-    const handleDragLeave = () => {
+    const handleDragLeave = useCallback(() => {
         setDragOverExpenseId(null);
-    };
+    }, []);
 
-    const handleDrop = async (e: React.DragEvent, targetExpenseId: number) => {
+    const handleDrop = useCallback(async (e: React.DragEvent, targetExpenseId: number) => {
         e.preventDefault();
         setDragOverExpenseId(null);
         
@@ -243,14 +258,14 @@ const Expenses: React.FC = () => {
             setExpenses(expenses);
             alert(err instanceof Error ? err.message : 'Failed to reorder expenses');
         }
-    };
+    }, [draggedExpenseId, expenses]);
 
-    const handleDragEnd = () => {
+    const handleDragEnd = useCallback(() => {
         setDraggedExpenseId(null);
         setDragOverExpenseId(null);
-    };
+    }, []);
 
-    const handleInvoiceUploadSuccess = (data: InvoiceUploadData) => {
+    const handleInvoiceUploadSuccess = useCallback((data: InvoiceUploadData) => {
         // Reset form first to clear any existing data
         resetCreateForm();
         // Pre-fill the form with extracted data
@@ -264,9 +279,9 @@ const Expenses: React.FC = () => {
         setCreateError(null);
         // Open the drawer to show the pre-filled form
         setDrawerOpen(true);
-    };
+    }, [resetCreateForm]);
 
-    const handleCreateExpense = async (e: React.FormEvent) => {
+    const handleCreateExpense = useCallback(async (e: React.FormEvent) => {
         e.preventDefault();
         setCreateError(null);
 
@@ -305,7 +320,7 @@ const Expenses: React.FC = () => {
         } finally {
             setCreating(false);
         }
-    };
+    }, [createName, createAmount, createCurrency, createCategory, createDate, editingExpenseId, resetCreateForm]);
 
     return (
         <div className={styles.page}>
@@ -400,7 +415,7 @@ const Expenses: React.FC = () => {
                                                             <button
                                                                 type="button"
                                                                 className={styles.menuButton}
-                                                                onClick={() => setMenuOpenId(menuOpenId === expense.id ? null : expense.id)}
+                                                                onClick={() => handleToggleMenu(expense.id)}
                                                                 aria-label="More options"
                                                             >
                                                                 ⋯
@@ -477,12 +492,12 @@ const Expenses: React.FC = () => {
                                 className={styles.fab}
                                 aria-label="Add transaction"
                                 title="Add"
-                                onClick={() => { resetCreateForm(); setDrawerOpen(true); }}
+                                onClick={handleDrawerOpen}
                             >
                                 +
                             </button>
 
-                {drawerOpen && <div className={styles.backdrop} onClick={() => { setDrawerOpen(false); resetCreateForm(); }} />}
+                {drawerOpen && <div className={styles.backdrop} onClick={handleDrawerClose} />}
 
                 {drawerOpen && (
                     <aside className={styles.drawer} aria-label={editingExpenseId ? "Edit expense drawer" : "Create expense drawer"}>
@@ -558,7 +573,7 @@ const Expenses: React.FC = () => {
                                 <button
                                     type="button"
                                     className={styles.closeFab}
-                                    onClick={() => { setDrawerOpen(false); resetCreateForm(); }}
+                                    onClick={handleDrawerClose}
                                     aria-label="Close"
                                     title="Close"
                                 >

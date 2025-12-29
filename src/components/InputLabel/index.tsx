@@ -1,3 +1,4 @@
+import React, { memo } from 'react';
 import styles from './index.module.css';
 
 interface InputLabelProps {
@@ -5,10 +6,12 @@ interface InputLabelProps {
   htmlFor?: string;
 }
 
-export const InputLabel = ({ children, htmlFor }: InputLabelProps) => {
+export const InputLabel = memo(({ children, htmlFor }: InputLabelProps) => {
   return (
     <label className={styles.label} htmlFor={htmlFor}>
       {children}
     </label>
   );
-};
+});
+
+InputLabel.displayName = 'InputLabel';

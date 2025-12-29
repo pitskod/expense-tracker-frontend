@@ -1,11 +1,10 @@
-import React from 'react';
+import React, { memo } from 'react';
 
 interface AuthDesktopBackgroundProps {
     useLoginSvg?: boolean; // Use login.svg instead of logo.svg
 }
 
-export const AuthDesktopBackground: React.FC<AuthDesktopBackgroundProps> = ({
-}) => {
+export const AuthDesktopBackground = memo<AuthDesktopBackgroundProps>(({}) => {
     return (
         <div className="desktop-left-panel">
             <div className="desktop-logo">
@@ -24,6 +23,8 @@ export const AuthDesktopBackground: React.FC<AuthDesktopBackgroundProps> = ({
             </div>
         </div>
     );
-};
+});
+
+AuthDesktopBackground.displayName = 'AuthDesktopBackground';
 
 export default AuthDesktopBackground;

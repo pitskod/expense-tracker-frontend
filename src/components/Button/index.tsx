@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import styles from './index.module.css';
 
 interface ButtonProps {
@@ -8,7 +8,7 @@ interface ButtonProps {
   type?: 'button' | 'submit' | 'reset';
 }
 
-export const Button = ({ children, onClick, disabled, type = 'button' }: ButtonProps) => {
+export const Button = memo(({ children, onClick, disabled, type = 'button' }: ButtonProps) => {
   return (
     <button 
       type={type}
@@ -19,4 +19,6 @@ export const Button = ({ children, onClick, disabled, type = 'button' }: ButtonP
       {children}
     </button>
   );
-};
+});
+
+Button.displayName = 'Button';

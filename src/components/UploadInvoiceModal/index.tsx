@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, memo } from 'react';
 import styles from './index.module.css';
 import { Loader } from '../Loader';
 import { apiClient } from '@/utils/api';
@@ -20,7 +20,30 @@ interface UploadInvoiceModalProps {
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 
-export const UploadInvoiceModal: React.FC<UploadInvoiceModalProps> = ({
+// Pure function - moved outside component to prevent recreation
+const validateFile = (fileToValidate: File): string | null => {
+  // Check file type
+  const validTypes = ['image/jpeg', 'image/jpg'];
+  if (!validTypes.includes(fileToValidate.type)) {
+    return 'Only JPG files are allowed';
+  }
+
+  // Check file extension
+  const fileName = fileToValidate.name.toLowerCase();
+  if (!fileName.endsWith('.jpg') && !fileName.endsWith('.jpeg')) {
+    return 'Only .jpg or .jpeg files are allowed';
+  }
+
+  // Check file size
+  if (fileToValidate.size > MAX_FILE_SIZE) {
+    const sizeMB = (fileToValidate.size / (1024 * 1024)).toFixed(2);
+    return `File size exceeds 5 MB. Current size: ${sizeMB} MB`;
+  }
+
+  return null;
+};
+
+export const UploadInvoiceModal = memo<UploadInvoiceModalProps>(({
   isOpen,
   onClose,
   onUploadSuccess,
@@ -30,28 +53,6 @@ export const UploadInvoiceModal: React.FC<UploadInvoiceModalProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
-
-  const validateFile = (fileToValidate: File): string | null => {
-    // Check file type
-    const validTypes = ['image/jpeg', 'image/jpg'];
-    if (!validTypes.includes(fileToValidate.type)) {
-      return 'Only JPG files are allowed';
-    }
-
-    // Check file extension
-    const fileName = fileToValidate.name.toLowerCase();
-    if (!fileName.endsWith('.jpg') && !fileName.endsWith('.jpeg')) {
-      return 'Only .jpg or .jpeg files are allowed';
-    }
-
-    // Check file size
-    if (fileToValidate.size > MAX_FILE_SIZE) {
-      const sizeMB = (fileToValidate.size / (1024 * 1024)).toFixed(2);
-      return `File size exceeds 5 MB. Current size: ${sizeMB} MB`;
-    }
-
-    return null;
-  };
 
   const handleFileSelect = useCallback((selectedFile: File) => {
     const validationError = validateFile(selectedFile);
@@ -263,5 +264,7 @@ export const UploadInvoiceModal: React.FC<UploadInvoiceModalProps> = ({
       </div>
     </>
   );
-};
+});
+
+UploadInvoiceModal.displayName = 'UploadInvoiceModal';
 

@@ -11,7 +11,7 @@ import {
     Profile,
     NotFound
 } from '../pages';
-import { ensureAuth } from '../utils/api';
+import { ensureAuth, getAccessToken } from '../utils/api';
 
 // Define all application routes
 const router = createBrowserRouter([
@@ -19,6 +19,11 @@ const router = createBrowserRouter([
         path: '/',
         element: <Expenses />,
         loader: async () => {
+            // If we already have a token, we're good
+            if (getAccessToken()) {
+                return null;
+            }
+            // Otherwise, try to refresh from cookie
             try {
                 await ensureAuth();
                 return null;
@@ -26,7 +31,6 @@ const router = createBrowserRouter([
                 throw redirect('/sign-in');
             }
         },
-        errorElement: <NotFound />,
     },
     {
         path: '/sign-in',
